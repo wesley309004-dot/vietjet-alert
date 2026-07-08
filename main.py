@@ -16,26 +16,24 @@ def send(text):
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
+
     page = browser.new_page()
 
     page.goto(
-        "https://www.vietjetair.com/zh-TW",
+        "https://www.vietjetair.com/zh-TW/select-flight",
         timeout=60000
     )
 
+    page.wait_for_timeout(10000)
+
     inputs = page.locator("input")
 
-    result = "找到輸入框數量：" + str(inputs.count()) + "\n\n"
+    result = "訂票頁輸入框數量：" + str(inputs.count()) + "\n\n"
 
     for i in range(inputs.count()):
-        try:
-            result += (
-                f"{i}: "
-                + inputs.nth(i).get_attribute("placeholder")
-                + "\n"
-            )
-        except:
-            pass
+        placeholder = inputs.nth(i).get_attribute("placeholder")
+        name = inputs.nth(i).get_attribute("name")
+        result += f"{i}: placeholder={placeholder}, name={name}\n"
 
     send(result)
 
