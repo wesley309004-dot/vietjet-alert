@@ -20,7 +20,8 @@ jobs:
 
       - name: 安裝套件
         run: |
-          pip install requests
+          pip install requests playwright
+          playwright install chromium
 
       - name: 執行監控
         env:
