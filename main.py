@@ -16,7 +16,6 @@ def send(text):
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
-
     page = browser.new_page()
 
     page.goto(
@@ -26,14 +25,16 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(10000)
 
-    inputs = page.locator("input")
+    buttons = page.locator("button")
 
-    result = "訂票頁輸入框數量：" + str(inputs.count()) + "\n\n"
+    result = "按鈕數量：" + str(buttons.count()) + "\n\n"
 
-    for i in range(inputs.count()):
-        placeholder = inputs.nth(i).get_attribute("placeholder")
-        name = inputs.nth(i).get_attribute("name")
-        result += f"{i}: placeholder={placeholder}, name={name}\n"
+    for i in range(buttons.count()):
+        try:
+            text = buttons.nth(i).inner_text()
+            result += f"{i}: {text}\n"
+        except:
+            pass
 
     send(result)
 
