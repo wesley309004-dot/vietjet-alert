@@ -1,44 +1,41 @@
 import os
 import requests
+from playwright.sync_api import sync_playwright
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-url = "https://www.vietjetair.com/en/pages/promotions"
-
-keywords = [
-    "Japan",
-    "Sale",
-    "Promotion",
-    "Flash Sale",
-    "Discount"
-]
+def send_message(text):
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": text
+        }
+    )
 
 try:
-    r = requests.get(url, timeout=20)
-    text = r.text.lower()
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
 
-    found = []
+        page = browser.new_page()
 
-    for k in keywords:
-        if k.lower() in text:
-            found.append(k)
-
-    if found:
-        message = (
-            "✈️ Vietjet 促銷偵測！\n\n"
-            "發現關鍵字：\n"
-            + ", ".join(found)
-            + "\n\n請立即查看官網"
+        page.goto(
+            "https://www.vietjetair.com/zh-TW",
+            timeout=60000
         )
 
-        requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={
-                "chat_id": CHAT_ID,
-                "text": message
-            }
+        title = page.title()
+
+        send_message(
+            "✈️ Vietjet瀏覽器測試成功\n"
+            f"頁面：{title}"
         )
+
+        browser.close()
 
 except Exception as e:
-    print(e)
+    send_message(
+        "❌ Vietjet測試失敗\n"
+        + str(e)
+    )
