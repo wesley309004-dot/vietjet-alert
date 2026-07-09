@@ -5,6 +5,7 @@ from playwright.sync_api import sync_playwright
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
+
 def send(text):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
@@ -28,6 +29,8 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(8000)
 
+
+    # Cookie
     try:
         page.get_by_text("接受").click(timeout=3000)
         page.wait_for_timeout(3000)
@@ -35,40 +38,31 @@ with sync_playwright() as p:
         pass
 
 
-    result = "=== 元件分析 ===\n\n"
+    result = "=== 出發地測試 ===\n\n"
 
 
-    # 找 role
-    combos = page.locator('[role="combobox"]')
+    try:
+        # 點擊出發地文字附近區域
+        page.get_by_text(
+            "出發地點",
+            exact=True
+        ).click(timeout=5000)
 
-    result += "Combobox數量：" + str(combos.count()) + "\n\n"
+        page.wait_for_timeout(3000)
 
-    for i in range(combos.count()):
-        try:
-            result += (
-                f"{i}: "
-                + combos.nth(i).inner_text()
-                + "\n"
-            )
-        except:
-            pass
+        result += "成功點擊出發地點\n\n"
+
+    except Exception as e:
+
+        result += "點擊失敗\n"
+        result += str(e)
 
 
-    # 找包含文字的元素
+    # 點擊後抓頁面文字
+    text = page.locator("body").inner_text()
 
-    keywords = [
-        "出發地點",
-        "目的地",
-        "出發日期",
-        "返程日期",
-        "乘客"
-    ]
-
-    result += "\n=== 關鍵文字 ===\n"
-
-    for k in keywords:
-        count = page.get_by_text(k, exact=False).count()
-        result += f"{k}: {count}\n"
+    result += "=== 後續文字 ===\n"
+    result += text[:1000]
 
 
     send(result)
