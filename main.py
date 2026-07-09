@@ -9,7 +9,7 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send(text):
 
-    r = requests.post(
+    requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
@@ -18,13 +18,10 @@ def send(text):
         timeout=20
     )
 
-    print(r.text)
-
-
 
 try:
 
-    result = "=== TPE父層定位測試 ===\n\n"
+    result = "=== TPE精準點擊測試 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -38,9 +35,6 @@ try:
         page = browser.new_page(
             locale="zh-TW"
         )
-
-
-        print("開啟網站")
 
 
         page.goto(
@@ -69,9 +63,6 @@ try:
 
 
 
-        print("開啟出發地")
-
-
         page.get_by_text(
             "出發地點",
             exact=True
@@ -85,6 +76,8 @@ try:
 
 
 
+        # 找 TPE
+
         tpe = page.locator(
             "div.jss829"
         ).filter(
@@ -97,51 +90,17 @@ try:
 
 
 
-        # 第一層
+        # 找真正選項盒
 
-        p1 = tpe.locator(
-            "xpath=.."
-        )
-
-        result += (
-            "第1層:\n"
-            + p1.inner_text()
-            + "\n\n"
-        )
-
-
-
-        # 第二層
-
-        p2 = tpe.locator(
-            "xpath=../.."
-        )
-
-        result += (
-            "第2層:\n"
-            + p2.inner_text()
-            + "\n\n"
-        )
-
-
-
-        # 第三層
-
-        p3 = tpe.locator(
-            "xpath=../../.."
-        )
-
-        result += (
-            "第3層:\n"
-            + p3.inner_text()
-            + "\n\n"
+        option = tpe.locator(
+            "xpath=../../"
         )
 
 
 
         result += (
-            "第三層HTML:\n"
-            + p3.evaluate(
+            "準備點擊:\n"
+            + option.evaluate(
                 "(e)=>e.outerHTML"
             )[:500]
             + "\n\n"
@@ -149,15 +108,23 @@ try:
 
 
 
-        # 嘗試點第三層
+        # 嘗試正常click
 
-        p3.dispatch_event(
-            "click"
+        option.click(
+            force=True,
+            timeout=5000
         )
 
 
         page.wait_for_timeout(3000)
 
+
+
+        result += "已click\n"
+
+
+
+        # 判斷
 
         remain = page.locator(
             "div.jss829"
@@ -168,7 +135,7 @@ try:
 
 
         result += (
-            "點擊後TPE數量:"
+            "剩餘TPE:"
             + str(remain)
             + "\n"
         )
@@ -176,11 +143,11 @@ try:
 
         if remain == 0:
 
-            result += "成功關閉選單"
+            result += "成功"
 
         else:
 
-            result += "選單仍存在"
+            result += "仍存在"
 
 
 
