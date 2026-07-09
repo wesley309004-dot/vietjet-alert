@@ -5,7 +5,6 @@ from playwright.sync_api import sync_playwright
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-
 def send(text):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
@@ -30,39 +29,38 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
 
-    # Cookie
-    try:
-    page.locator("button").filter(has_text="接受").click(timeout=5000)
-    page.wait_for_timeout(3000)
-except Exception as e:
-    print(e)
+    result = "=== Cookie分析 ===\n\n"
 
 
-    result = "=== 出發地測試 ===\n\n"
+    # 找所有包含接受的元素
+    accept = page.get_by_text("接受", exact=False)
+
+    result += "接受文字數量：" + str(accept.count()) + "\n\n"
 
 
-    try:
-        # 點擊出發地文字附近區域
-        page.get_by_text(
-            "出發地點",
-            exact=True
-        ).click(timeout=5000)
-
-        page.wait_for_timeout(3000)
-
-        result += "成功點擊出發地點\n\n"
-
-    except Exception as e:
-
-        result += "點擊失敗\n"
-        result += str(e)
+    for i in range(accept.count()):
+        try:
+            result += (
+                f"接受{i}: "
+                + accept.nth(i).evaluate("(e)=>e.outerHTML")
+                [:500]
+                + "\n\n"
+            )
+        except:
+            pass
 
 
-    # 點擊後抓頁面文字
-    text = page.locator("body").inner_text()
+    # 找 Dialog
+    dialogs = page.locator('[role="dialog"]')
 
-    result += "=== 後續文字 ===\n"
-    result += text[:1000]
+    result += "\nDialog數量：" + str(dialogs.count()) + "\n"
+
+    for i in range(dialogs.count()):
+        try:
+            result += "\nDialog內容:\n"
+            result += dialogs.nth(i).inner_text()[:500]
+        except:
+            pass
 
 
     send(result)
