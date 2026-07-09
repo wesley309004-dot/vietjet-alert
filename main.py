@@ -1,6 +1,5 @@
 import os
 import requests
-import json
 from playwright.sync_api import sync_playwright
 
 
@@ -55,20 +54,18 @@ def mouse_click(page, locator):
 
 def open_page(page):
 
-    log("🌐 開啟 Vietjet")
-
+    log("🌐 開啟")
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
     )
 
-
     page.wait_for_timeout(10000)
 
 
 
-def accept_cookie(page):
+def cookie(page):
 
     try:
 
@@ -79,7 +76,7 @@ def accept_cookie(page):
             timeout=5000
         )
 
-        log("🍪 Cookie完成")
+        log("🍪 Cookie")
 
     except:
 
@@ -87,10 +84,7 @@ def accept_cookie(page):
 
 
 
-def select_departure(page):
-
-    log("🇹🇼 TPE")
-
+def departure(page):
 
     page.get_by_text(
         "出發地點",
@@ -98,7 +92,6 @@ def select_departure(page):
     ).click(
         force=True
     )
-
 
     page.wait_for_timeout(5000)
 
@@ -110,9 +103,7 @@ def select_departure(page):
         force=True
     )
 
-
     page.wait_for_timeout(5000)
-
 
 
     tpe = page.locator(
@@ -134,14 +125,11 @@ def select_departure(page):
 
     page.wait_for_timeout(5000)
 
-    log("✅ TPE完成")
+    log("✅ TPE")
 
 
 
-def select_destination(page):
-
-    log("🛬 DAD")
-
+def destination(page):
 
     page.get_by_text(
         "目的地",
@@ -149,7 +137,6 @@ def select_destination(page):
     ).click(
         force=True
     )
-
 
     page.wait_for_timeout(8000)
 
@@ -168,8 +155,7 @@ def select_destination(page):
 
     page.wait_for_timeout(5000)
 
-
-    log("✅ DAD完成")
+    log("✅ DAD")
 
 
 
@@ -194,10 +180,7 @@ def choose_day(page,date):
 
 
 
-def select_dates(page):
-
-    log("📅 日期")
-
+def dates(page):
 
     page.get_by_text(
         "出發日期",
@@ -233,140 +216,85 @@ def select_dates(page):
     )
 
 
-    log("✅ 日期完成")
+    log("✅ 日期")
 
 
 
-# ==========================
-# API Response監控
-# ==========================
+# =====================
+# 新增：Input檢查
+# =====================
 
-api_result = []
+def inspect_inputs(page):
 
-
-def setup_response(page):
-
-
-    def response_handler(res):
-
-        url = res.url.lower()
+    log("🔎 檢查INPUT")
 
 
-        if (
-            "api" in url
-            or "flight" in url
-            or "search" in url
-            or "booking" in url
-        ):
-
-
-            status = res.status
-
-
-            item = {
-                "status": status,
-                "url": res.url
-            }
-
-
-            try:
-
-                data = res.text()
-
-                item["body"] = data[:500]
-
-
-            except:
-
-                pass
-
-
-
-            api_result.append(item)
-
-
-
-    page.on(
-        "response",
-        response_handler
+    inputs = page.locator(
+        "input"
     )
 
 
-
-def click_search(page):
-
-    log("🔍 點查詢")
-
-
-    btn = page.get_by_text(
-        "查詢航班",
-        exact=True
-    ).last
-
-
-    btn.evaluate(
-        "(e)=>e.click()"
-    )
-
-
-    page.wait_for_timeout(
-        30000
-    )
-
-
-    log("📡 API整理")
+    result = []
 
 
 
-    output = []
+    for i in range(inputs.count()):
+
+        try:
+
+            value = inputs.nth(i).input_value()
+
+        except:
+
+            value = "ERROR"
 
 
-    for x in api_result:
 
+        try:
 
-        # 只看重要的
-
-        if (
-            x["status"] != 200
-            or
-            "flight" in x["url"].lower()
-            or
-            "search" in x["url"].lower()
-        ):
-
-
-            output.append(
-                "STATUS:\n"
-                +str(x["status"])
-                +
-                "\nURL:\n"
-                +x["url"][:300]
-                +
-                "\nBODY:\n"
-                +x.get("body","")[:500]
+            placeholder = inputs.nth(i).get_attribute(
+                "placeholder"
             )
 
+        except:
+
+            placeholder = ""
 
 
-    if len(output)==0:
 
-        send(
-            "沒有抓到搜尋API"
-        )
+        try:
 
-    else:
-
-        send(
-            "\n\n==========\n\n".join(
-                output[:10]
+            aria = inputs.nth(i).get_attribute(
+                "aria-label"
             )
+
+        except:
+
+            aria = ""
+
+
+
+        result.append(
+            f"""
+INPUT {i}
+
+value:
+{value}
+
+placeholder:
+{placeholder}
+
+aria:
+{aria}
+"""
         )
 
 
 
     send(
-        "最後URL:\n"
-        +page.url
+        "INPUT結果:\n"
+        +
+        "\n".join(result[:20])
     )
 
 
@@ -374,7 +302,7 @@ def click_search(page):
 def main():
 
     send(
-        "🚀 API Response Debug開始"
+        "🚀 Input State Debug"
     )
 
 
@@ -393,20 +321,19 @@ def main():
 
         try:
 
-            setup_response(page)
-
-
             open_page(page)
 
-            accept_cookie(page)
+            cookie(page)
 
-            select_departure(page)
+            departure(page)
 
-            select_destination(page)
+            destination(page)
 
-            select_dates(page)
+            dates(page)
 
-            click_search(page)
+
+            inspect_inputs(page)
+
 
 
             send(
