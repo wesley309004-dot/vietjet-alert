@@ -19,10 +19,9 @@ def send(text):
     )
 
 
-
 try:
 
-    result = "=== TPE React事件測試 ===\n\n"
+    result = "=== TPE點擊V3 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -77,6 +76,8 @@ try:
 
 
 
+        # 找 TPE
+
         tpe = page.locator(
             "div.jss829"
         ).filter(
@@ -85,52 +86,35 @@ try:
 
 
 
-        option = tpe.locator(
-            "xpath=ancestor::div[contains(@class,'MuiBox-root')][1]"
+        result += "找到TPE\n"
+
+
+
+        # 找城市名稱臺北
+
+        city = tpe.locator(
+            "xpath=../div[contains(@class,'jss828')]"
         )
 
 
         result += (
-            "找到:\n"
-            + option.evaluate(
-                "(e)=>e.outerHTML"
-            )[:500]
-            + "\n\n"
+            "城市文字:"
+            + city.inner_text()
+            + "\n"
         )
 
 
 
-        # 方法1：點桃園國際機場文字
+        # 點城市
 
-        airport = option.get_by_text(
-            "桃園國際機場",
-            exact=True
+        city.click(
+            force=True
         )
-
-
-        if airport.count() > 0:
-
-            result += "點擊桃園文字\n"
-
-            airport.click(
-                force=True
-            )
-
-        else:
-
-            result += "找不到桃園文字，點整區\n"
-
-            option.click(
-                force=True
-            )
-
 
 
         page.wait_for_timeout(3000)
 
 
-
-        # 如果沒成功，補事件
 
         remain = page.locator(
             "div.jss829"
@@ -139,22 +123,29 @@ try:
         ).count()
 
 
+
+        result += (
+            "第一次後TPE:"
+            + str(remain)
+            + "\n"
+        )
+
+
+
         if remain > 0:
 
 
-            result += "第一次無效，補dispatch事件\n"
+            # 重新抓，避免 stale
+
+            tpe2 = page.locator(
+                "div.jss829"
+            ).filter(
+                has_text="TPE"
+            ).first
 
 
-            option.dispatch_event(
-                "mousedown"
-            )
-
-            option.dispatch_event(
-                "mouseup"
-            )
-
-            option.dispatch_event(
-                "click"
+            tpe2.press(
+                "Enter"
             )
 
 
@@ -171,20 +162,19 @@ try:
 
 
         result += (
-            "剩餘TPE:"
+            "最後TPE:"
             + str(remain)
             + "\n"
         )
 
 
-
         if remain == 0:
 
-            result += "成功選取"
+            result += "成功"
 
         else:
 
-            result += "仍未選取"
+            result += "失敗"
 
 
 
