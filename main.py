@@ -9,7 +9,7 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send(text):
 
-    requests.post(
+    r = requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
@@ -18,10 +18,13 @@ def send(text):
         timeout=20
     )
 
+    print(r.text)
+
+
 
 try:
 
-    result = "=== TPE精準點擊測試 ===\n\n"
+    result = "=== TPE精準點擊V2 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -35,6 +38,9 @@ try:
         page = browser.new_page(
             locale="zh-TW"
         )
+
+
+        print("開啟網站")
 
 
         page.goto(
@@ -76,7 +82,7 @@ try:
 
 
 
-        # 找 TPE
+        # 找TPE
 
         tpe = page.locator(
             "div.jss829"
@@ -97,9 +103,23 @@ try:
         )
 
 
+        # 如果上面失敗，改用祖先搜尋
+
+        option = tpe.locator(
+            "xpath=ancestor::div[contains(@class,'MuiBox-root')][1]"
+        )
+
+
 
         result += (
-            "準備點擊:\n"
+            "點擊元素文字:\n"
+            + option.inner_text()
+            + "\n\n"
+        )
+
+
+        result += (
+            "HTML:\n"
             + option.evaluate(
                 "(e)=>e.outerHTML"
             )[:500]
@@ -107,8 +127,6 @@ try:
         )
 
 
-
-        # 嘗試正常click
 
         option.click(
             force=True,
@@ -120,11 +138,11 @@ try:
 
 
 
-        result += "已click\n"
+        result += "已點擊\n"
 
 
 
-        # 判斷
+        # 檢查
 
         remain = page.locator(
             "div.jss829"
@@ -143,11 +161,11 @@ try:
 
         if remain == 0:
 
-            result += "成功"
+            result += "成功關閉"
 
         else:
 
-            result += "仍存在"
+            result += "選單仍存在"
 
 
 
@@ -159,7 +177,6 @@ try:
 
 
 except Exception as e:
-
 
     send(
         "錯誤:\n"
