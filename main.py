@@ -9,7 +9,7 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send(text):
 
-    requests.post(
+    r = requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
@@ -18,10 +18,13 @@ def send(text):
         timeout=20
     )
 
+    print(r.text)
+
+
 
 try:
 
-    result = "=== TPE真正選取測試 ===\n\n"
+    result = "=== TPE父層定位測試 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -35,6 +38,9 @@ try:
         page = browser.new_page(
             locale="zh-TW"
         )
+
+
+        print("開啟網站")
 
 
         page.goto(
@@ -63,6 +69,9 @@ try:
 
 
 
+        print("開啟出發地")
+
+
         page.get_by_text(
             "出發地點",
             exact=True
@@ -80,74 +89,75 @@ try:
             "div.jss829"
         ).filter(
             has_text="TPE"
+        ).first
+
+
+
+        result += "找到TPE\n\n"
+
+
+
+        # 第一層
+
+        p1 = tpe.locator(
+            "xpath=.."
         )
 
-
         result += (
-            "TPE數量:"
-            + str(tpe.count())
+            "第1層:\n"
+            + p1.inner_text()
             + "\n\n"
         )
 
 
-        if tpe.count() > 0:
 
+        # 第二層
 
-            target = tpe.first
+        p2 = tpe.locator(
+            "xpath=../.."
+        )
 
-
-            # 往上找真正選項盒
-
-            for i in range(1,5):
-
-                parent = target.locator(
-                    f"xpath={'../'*i}"
-                )
-
-
-                txt = parent.inner_text()
-
-
-                result += (
-                    f"第{i}層父元素:\n"
-                    + txt[:200]
-                    + "\n\n"
-                )
-
-
-            option = target.locator(
-                "xpath=../../.."
-            )
-
-
-            result += (
-                "最後點擊元素:\n"
-                + option.evaluate(
-                    "(e)=>e.outerHTML"
-                )[:500]
-                + "\n\n"
-            )
-
-
-            option.dispatch_event(
-                "click"
-            )
-
-
-            page.wait_for_timeout(5000)
-
-
-            result += "已發送click事件\n"
+        result += (
+            "第2層:\n"
+            + p2.inner_text()
+            + "\n\n"
+        )
 
 
 
-        else:
+        # 第三層
 
-            result += "找不到TPE\n"
+        p3 = tpe.locator(
+            "xpath=../../.."
+        )
+
+        result += (
+            "第3層:\n"
+            + p3.inner_text()
+            + "\n\n"
+        )
 
 
 
-        # 檢查選單
+        result += (
+            "第三層HTML:\n"
+            + p3.evaluate(
+                "(e)=>e.outerHTML"
+            )[:500]
+            + "\n\n"
+        )
+
+
+
+        # 嘗試點第三層
+
+        p3.dispatch_event(
+            "click"
+        )
+
+
+        page.wait_for_timeout(3000)
+
 
         remain = page.locator(
             "div.jss829"
@@ -156,19 +166,21 @@ try:
         ).count()
 
 
+
         result += (
-            "\n目前TPE數量:"
+            "點擊後TPE數量:"
             + str(remain)
+            + "\n"
         )
 
 
         if remain == 0:
 
-            result += "\n選取成功"
+            result += "成功關閉選單"
 
         else:
 
-            result += "\n選單仍存在"
+            result += "選單仍存在"
 
 
 
@@ -180,6 +192,7 @@ try:
 
 
 except Exception as e:
+
 
     send(
         "錯誤:\n"
