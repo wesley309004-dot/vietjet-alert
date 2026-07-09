@@ -18,7 +18,6 @@ def send(t):
     )
 
 
-
 with sync_playwright() as p:
 
     browser = p.chromium.launch(
@@ -31,124 +30,130 @@ with sync_playwright() as p:
     )
 
 
-    page.goto(
-        "https://www.vietjetair.com/zh-TW",
-        timeout=60000
-    )
-
-
-    page.wait_for_timeout(8000)
-
-
     try:
-        page.get_by_text(
-            "接受",
-            exact=True
-        ).click(
-            timeout=3000
+
+        send("🚀 Calendar DOM完整測試開始")
+
+
+        page.goto(
+            "https://www.vietjetair.com/zh-TW",
+            timeout=60000
         )
-    except:
-        pass
 
 
+        page.wait_for_timeout(
+            8000
+        )
 
-    # 打開日期
-
-    page.get_by_text(
-        "出發日期",
-        exact=True
-    ).first.locator(
-        "xpath=ancestor::div[@role='button'][1]"
-    ).click()
-
-
-    page.wait_for_timeout(
-        3000
-    )
-
-
-
-    send(
-        "✅ 日期已開啟，開始抓HTML"
-    )
-
-
-
-    # 抓可能是calendar的元素
-
-    elements = page.locator(
-        "div,button,svg"
-    )
-
-
-    result = "=== CALENDAR ELEMENT DEBUG ===\n\n"
-
-
-    count = 0
-
-
-    for i in range(elements.count()):
 
         try:
 
-            html = elements.nth(i).evaluate(
-                "(e)=>e.outerHTML"
+            page.get_by_text(
+                "接受",
+                exact=True
+            ).click(
+                timeout=3000
             )
-
-
-            text = elements.nth(i).inner_text(
-                timeout=500
-            )
-
-
-            if (
-                "2026" in html
-                or "七月" in html
-                or "八月" in html
-                or "calendar" in html.lower()
-                or "chevron" in html.lower()
-                or "arrow" in html.lower()
-            ):
-
-                result += f"""
-
---- ELEMENT {i} ---
-
-TEXT:
-{text[:300]}
-
-HTML:
-{html[:1500]}
-
-================
-
-"""
-
-
-                count += 1
-
-
-                if len(result) > 3500:
-
-                    send(result)
-
-                    result = (
-                        "=== CONTINUE ===\n\n"
-                    )
-
 
         except:
+
             pass
 
 
 
-    result += (
-        f"\n找到元素數量:{count}"
-    )
+        # 開啟日期
+
+        page.get_by_text(
+            "出發日期",
+            exact=True
+        ).first.locator(
+            "xpath=ancestor::div[@role='button'][1]"
+        ).click()
 
 
-    send(result)
+
+        page.wait_for_timeout(
+            3000
+        )
+
+
+        send(
+            "✅ 日期面板已開啟"
+        )
 
 
 
-    browser.close()
+        # 找月份
+
+        month = page.get_by_text(
+            "七月 2026",
+            exact=True
+        ).first
+
+
+
+        if month.count() == 0:
+
+            send(
+                "❌ 找不到 七月2026"
+            )
+
+        else:
+
+
+            send(
+                "✅ 找到七月2026\n\n"
+                +
+                month.evaluate(
+                    "(e)=>e.outerHTML"
+                )[:2000]
+            )
+
+
+
+            for i in range(1,8):
+
+                try:
+
+                    html = month.locator(
+                        "xpath=" + "/.." * i
+                    ).evaluate(
+                        "(e)=>e.outerHTML"
+                    )
+
+
+                    send(
+f"""
+===== 第{i}層 =====
+
+{html[:3500]}
+
+"""
+                    )
+
+
+                except Exception as e:
+
+                    send(
+                        f"第{i}層錯誤\n{e}"
+                    )
+
+
+
+        send(
+            "🎉 Calendar DOM測試完成"
+        )
+
+
+    except Exception as e:
+
+        send(
+            "❌錯誤\n"
+            +
+            str(e)
+        )
+
+
+    finally:
+
+        browser.close()
