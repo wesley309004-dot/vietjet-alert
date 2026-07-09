@@ -1,17 +1,12 @@
 import os
-import re
 import requests
+import time
 from playwright.sync_api import sync_playwright
 
-
-# =========================
-# 設定
-# =========================
 
 FROM = "TPE"
 TO = "DAD"
 
-# 夏季航班測試日期
 GO_DATE = "2026-10-20"
 RETURN_DATE = "2026-10-24"
 
@@ -22,10 +17,6 @@ TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
-
-# =========================
-# Telegram
-# =========================
 
 def send(text):
 
@@ -49,9 +40,17 @@ def log(text):
 
 
 
-# =========================
-# 工具
-# =========================
+def screenshot(page,name):
+
+    try:
+        page.screenshot(
+            path=name+".png",
+            full_page=True
+        )
+    except:
+        pass
+
+
 
 def mouse_click(page, locator):
 
@@ -60,12 +59,11 @@ def mouse_click(page, locator):
     if not box:
         return False
 
+    x = box["x"] + box["width"]/2
+    y = box["y"] + box["height"]/2
 
-    x = box["x"] + box["width"] / 2
-    y = box["y"] + box["height"] / 2
 
-
-    page.mouse.move(x, y)
+    page.mouse.move(x,y)
     page.mouse.down()
 
     page.wait_for_timeout(200)
@@ -76,43 +74,18 @@ def mouse_click(page, locator):
 
 
 
-def screenshot(page, name):
-
-    try:
-
-        page.screenshot(
-            path=name + ".png",
-            full_page=True
-        )
-
-    except:
-
-        pass
-
-
-
-# =========================
-# 首頁
-# =========================
-
 def open_page(page):
 
     log("🌐 開啟 Vietjet")
-
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
     )
 
-
     page.wait_for_timeout(10000)
 
 
-
-# =========================
-# Cookie
-# =========================
 
 def accept_cookie(page):
 
@@ -127,20 +100,15 @@ def accept_cookie(page):
 
         log("🍪 Cookie完成")
 
-
     except:
 
         log("🍪 無Cookie")
 
 
 
-# =========================
-# 出發地
-# =========================
-
 def select_departure(page):
 
-    log("🛫 選擇出發地")
+    log("🛫 選擇TPE")
 
 
     page.get_by_text(
@@ -150,9 +118,7 @@ def select_departure(page):
         force=True
     )
 
-
     page.wait_for_timeout(5000)
-
 
 
     page.get_by_text(
@@ -162,9 +128,7 @@ def select_departure(page):
         force=True
     )
 
-
     page.wait_for_timeout(5000)
-
 
 
     tpe = page.locator(
@@ -178,14 +142,6 @@ def select_departure(page):
     ).first
 
 
-
-    if tpe.count() == 0:
-
-        raise Exception(
-            "找不到TPE"
-        )
-
-
     mouse_click(
         page,
         tpe
@@ -194,18 +150,13 @@ def select_departure(page):
 
     page.wait_for_timeout(5000)
 
-
     log("✅ TPE完成")
 
 
 
-# =========================
-# 目的地
-# =========================
-
 def select_destination(page):
 
-    log("🛬 選擇目的地")
+    log("🛬 選擇DAD")
 
 
     page.get_by_text(
@@ -219,19 +170,10 @@ def select_destination(page):
     page.wait_for_timeout(8000)
 
 
-
     dad = page.get_by_text(
         TO,
         exact=True
     ).last
-
-
-
-    if dad.count() == 0:
-
-        raise Exception(
-            "找不到DAD"
-        )
 
 
     mouse_click(
@@ -247,27 +189,15 @@ def select_destination(page):
 
 
 
-# =========================
-# 日期
-# =========================
+def choose_day(page,date,label):
 
-def choose_day(page, date_value, title):
-
-    day = date_value.split("-")[2]
+    day = date.split("-")[2]
 
 
     target = page.get_by_text(
         str(int(day)),
         exact=True
     ).last
-
-
-
-    if target.count() == 0:
-
-        raise Exception(
-            f"找不到日期 {date_value}"
-        )
 
 
     mouse_click(
@@ -280,15 +210,14 @@ def choose_day(page, date_value, title):
 
 
     log(
-        f"✅ {title} {date_value}"
+        f"✅ {label} {date}"
     )
 
 
 
 def select_date(page):
 
-    log("📅 去程日期")
-
+    log("📅 去程")
 
     page.get_by_text(
         "出發日期",
@@ -296,7 +225,6 @@ def select_date(page):
     ).click(
         force=True
     )
-
 
     page.wait_for_timeout(5000)
 
@@ -311,8 +239,7 @@ def select_date(page):
 
 def select_return_date(page):
 
-    log("📅 回程日期")
-
+    log("📅 回程")
 
     page.get_by_text(
         "返程日期",
@@ -320,7 +247,6 @@ def select_return_date(page):
     ).click(
         force=True
     )
-
 
     page.wait_for_timeout(5000)
 
@@ -333,131 +259,147 @@ def select_return_date(page):
 
 
 
-# =========================
-# 查詢
-# =========================
+def check_form(page):
 
-def search_flight(page):
-
-    log("🔍 查詢航班")
-
-
-    page.get_by_text(
-        "查詢航班",
-        exact=True
-    ).click(
-        force=True
-    )
-
-
-    log(
-        "⏳ 等待結果頁"
-    )
-
-
-    page.wait_for_timeout(30000)
-
-
-    log(
-        "✅ 查詢完成"
-    )
-
-
-
-# =========================
-# 結果頁 Debug
-# =========================
-
-def debug_result(page):
-
-    log("📄 分析結果頁")
-
-
-    url = page.url
-
-
-    send(
-        "目前網址:\n" + url
-    )
-
-
-
-    body = page.locator(
+    text = page.locator(
         "body"
     ).inner_text()
 
 
-
-    keywords = [
-        "TWD",
-        "HKD",
-        "USD",
-        "價格",
-        "航班",
-        "Vietjet",
-        "選擇"
-    ]
+    result = []
 
 
+    for key in [
+        "TPE",
+        "DAD",
+        GO_DATE.split("-")[2],
+        RETURN_DATE.split("-")[2]
+    ]:
 
-    found = []
+        if key in text:
 
+            result.append(
+                key+" OK"
+            )
 
-    for k in keywords:
+        else:
 
-        if k in body:
-
-            found.append(k)
-
-
-
-    send(
-        "找到關鍵字:\n"
-        +
-        "\n".join(found)
-    )
-
-
-
-    prices = re.findall(
-        r"\b\d{3,6}\b",
-        body
-    )
-
-
-    unique = []
-
-
-    for p in prices:
-
-        if p not in unique:
-
-            unique.append(p)
-
+            result.append(
+                key+" missing"
+            )
 
 
     send(
-        "數字候選:\n"
+        "📝表單檢查\n\n"
         +
-        "\n".join(unique[:50])
-    )
-
-
-    screenshot(
-        page,
-        "result_debug"
+        "\n".join(result)
     )
 
 
 
-# =========================
-# 主程式
-# =========================
+def search_flight(page):
+
+    log("🔍準備查詢")
+
+
+    check_form(page)
+
+
+    old_url = page.url
+
+
+
+    # 方法1
+
+    try:
+
+        page.get_by_text(
+            "查詢航班",
+            exact=True
+        ).click(
+            force=True
+        )
+
+        log("點擊文字按鈕")
+
+    except:
+
+        pass
+
+
+
+    page.wait_for_timeout(5000)
+
+
+
+    # 方法2
+
+    try:
+
+        page.locator(
+            "button"
+        ).filter(
+            has_text="查詢航班"
+        ).click(
+            force=True
+        )
+
+        log("點擊button")
+
+    except:
+
+        pass
+
+
+
+    # 方法3
+
+    try:
+
+        page.keyboard.press(
+            "Enter"
+        )
+
+        log("Enter提交")
+
+    except:
+
+        pass
+
+
+
+    for i in range(1,7):
+
+        page.wait_for_timeout(5000)
+
+
+        now = page.url
+
+
+        text = page.locator(
+            "body"
+        ).inner_text()
+
+
+        send(
+            f"⏱ {i*5}秒\n"
+            f"URL:\n{now}\n\n"
+            f"包含航班:{'航班' in text}\n"
+            f"包含TWD:{'TWD' in text}"
+        )
+
+
+        if now != old_url:
+
+            log("🎯 URL已變更")
+            break
+
+
 
 def main():
 
     send(
-        "🚀 Vietjet夏季航班Debug開始"
+        "🚀 查詢提交Debug開始"
     )
 
 
@@ -474,9 +416,7 @@ def main():
         )
 
 
-
         try:
-
 
             open_page(page)
 
@@ -492,13 +432,16 @@ def main():
 
             search_flight(page)
 
-            debug_result(page)
+
+            screenshot(
+                page,
+                "after_search"
+            )
 
 
             send(
-                "🎉 結果頁分析完成"
+                "🎉 Debug完成"
             )
-
 
 
         except Exception as e:
@@ -511,10 +454,8 @@ def main():
 
 
             send(
-                "❌錯誤\n"
-                + str(e)
+                "❌錯誤\n"+str(e)
             )
-
 
 
         finally:
@@ -523,6 +464,6 @@ def main():
 
 
 
-if __name__ == "__main__":
+if __name__=="__main__":
 
     main()
