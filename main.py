@@ -7,9 +7,6 @@ TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
-FROM = "TPE"
-TO = "DAD"
-
 GO_DATE = "2026-10-20"
 RETURN_DATE = "2026-10-24"
 
@@ -38,14 +35,64 @@ def log(text):
 
 
 
+def setup_response(page):
+
+
+    def handler(res):
+
+        url = res.url.lower()
+
+
+        keys = [
+            "flight",
+            "fare",
+            "price",
+            "availability",
+            "journey",
+            "segment",
+            "search",
+            "booking"
+        ]
+
+
+        if any(
+            k in url
+            for k in keys
+        ):
+
+
+            try:
+
+                body = res.text()
+
+            except:
+
+                body=""
+
+
+            api_logs.append(
+                {
+                    "status":res.status,
+                    "url":res.url,
+                    "body":body[:1000]
+                }
+            )
+
+
+    page.on(
+        "response",
+        handler
+    )
+
+
+
 def real_click(page, locator):
 
     locator.scroll_into_view_if_needed()
 
     locator.evaluate(
         """
-        e => {
-
+        e=>{
             e.dispatchEvent(
                 new MouseEvent(
                     'mouseover',
@@ -68,102 +115,18 @@ def real_click(page, locator):
             );
 
             e.click();
-
         }
         """
     )
 
 
 
-def check_inputs(page):
-
-    inputs = page.locator("input")
-
-    result=[]
-
-    for i in range(inputs.count()):
-
-        try:
-
-            result.append(
-                f"{i}: {inputs.nth(i).input_value()}"
-            )
-
-        except:
-
-            pass
-
-
-    send(
-        "目前INPUT:\n"
-        +
-        "\n".join(result)
-    )
-
-
-
-def setup_api(page):
-
-
-    def response(res):
-
-        url=res.url.lower()
-
-
-        if any(
-            x in url
-            for x in [
-                "flight",
-                "search",
-                "booking",
-                "availability",
-                "api"
-            ]
-        ):
-
-
-            if (
-                "google" not in url
-                and
-                "analytics" not in url
-            ):
-
-
-                try:
-
-                    body=res.text()
-
-                except:
-
-                    body=""
-
-
-                api_logs.append(
-                    {
-                        "status":res.status,
-                        "url":res.url,
-                        "body":body[:500]
-                    }
-                )
-
-
-    page.on(
-        "response",
-        response
-    )
-
-
-
 def open_page(page):
-
-    log("🌐 開啟 Vietjet")
-
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
     )
-
 
     page.wait_for_timeout(10000)
 
@@ -180,8 +143,6 @@ def cookie(page):
             timeout=5000
         )
 
-        log("🍪 Cookie完成")
-
     except:
 
         pass
@@ -190,9 +151,6 @@ def cookie(page):
 
 def select_tpe(page):
 
-    log("🇹🇼 選TPE")
-
-
     page.get_by_text(
         "出發地點",
         exact=True
@@ -200,9 +158,7 @@ def select_tpe(page):
         force=True
     )
 
-
     page.wait_for_timeout(5000)
-
 
 
     page.get_by_text(
@@ -216,16 +172,14 @@ def select_tpe(page):
     page.wait_for_timeout(5000)
 
 
-
-    tpe_code = page.locator(
+    code = page.locator(
         "div.jss829"
     ).filter(
         has_text="TPE"
     ).first
 
 
-
-    box = tpe_code.locator(
+    box = code.locator(
         "xpath=ancestor::div[contains(@class,'MuiBox-root')][1]"
     )
 
@@ -239,14 +193,8 @@ def select_tpe(page):
     page.wait_for_timeout(5000)
 
 
-    log("✅ TPE完成")
-
-
 
 def select_dad(page):
-
-    log("🛬 選DAD")
-
 
     page.get_by_text(
         "目的地",
@@ -259,12 +207,10 @@ def select_dad(page):
     page.wait_for_timeout(8000)
 
 
-
     dad = page.get_by_text(
         "DAD",
         exact=True
     ).last
-
 
 
     real_click(
@@ -274,9 +220,6 @@ def select_dad(page):
 
 
     page.wait_for_timeout(5000)
-
-
-    log("✅ DAD完成")
 
 
 
@@ -301,10 +244,7 @@ def choose_day(page,date):
 
 
 
-def select_date(page):
-
-    log("📅 日期")
-
+def dates(page):
 
     page.get_by_text(
         "出發日期",
@@ -340,20 +280,10 @@ def select_date(page):
     )
 
 
-    log("✅ 日期完成")
-
-
 
 def search(page):
 
-    log("🔍 查詢")
-
-
-    check_inputs(page)
-
-
-
-    btn=page.get_by_text(
+    btn = page.get_by_text(
         "查詢航班",
         exact=True
     ).last
@@ -365,16 +295,19 @@ def search(page):
 
 
     page.wait_for_timeout(
-        30000
+        40000
     )
 
 
-
-    send(
-        "最後URL:\n"
+    log(
+        "URL:\n"
         +
         page.url
     )
+
+
+
+def analyze_result(page):
 
 
     send(
@@ -384,8 +317,7 @@ def search(page):
     )
 
 
-
-    for x in api_logs[:5]:
+    for x in api_logs[:10]:
 
         send(
             f"""
@@ -393,19 +325,38 @@ STATUS:
 {x['status']}
 
 URL:
-{x['url'][:300]}
+{x['url'][:400]}
 
 BODY:
-{x['body'][:500]}
+{x['body'][:800]}
 """
         )
+
+
+
+    try:
+
+        text = page.locator(
+            "body"
+        ).inner_text()
+
+
+        send(
+            "結果頁文字:\n"
+            +
+            text[:2000]
+        )
+
+    except:
+
+        pass
 
 
 
 def main():
 
     send(
-        "🚀 Vietjet完整版測試"
+        "🚀 select-flight抓取開始"
     )
 
 
@@ -424,7 +375,7 @@ def main():
 
         try:
 
-            setup_api(page)
+            setup_response(page)
 
             open_page(page)
 
@@ -434,13 +385,15 @@ def main():
 
             select_dad(page)
 
-            select_date(page)
+            dates(page)
 
             search(page)
 
+            analyze_result(page)
+
 
             send(
-                "🎉流程完成"
+                "🎉完成"
             )
 
 
@@ -448,7 +401,8 @@ def main():
 
             send(
                 "❌錯誤\n"
-                +str(e)
+                +
+                str(e)
             )
 
 
