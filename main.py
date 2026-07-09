@@ -19,9 +19,36 @@ def send(text):
     )
 
 
+
+def real_click(page, locator):
+
+    box = locator.bounding_box()
+
+    if box:
+
+        x = box["x"] + box["width"] / 2
+        y = box["y"] + box["height"] / 2
+
+        page.mouse.move(
+            x,
+            y
+        )
+
+        page.mouse.down()
+
+        page.wait_for_timeout(200)
+
+        page.mouse.up()
+
+        return True
+
+    return False
+
+
+
 try:
 
-    result = "=== TPE滑鼠事件測試 ===\n\n"
+    result = "=== Vietjet目的地測試 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -47,6 +74,8 @@ try:
 
 
 
+        # Cookie
+
         try:
 
             page.locator("h5").filter(
@@ -63,6 +92,8 @@ try:
 
 
 
+        # 出發地
+
         page.get_by_text(
             "出發地點",
             exact=True
@@ -76,7 +107,7 @@ try:
 
 
 
-        # 找桃園機場文字
+        # TPE
 
         airport = page.locator(
             "div.jss830"
@@ -86,76 +117,107 @@ try:
 
 
 
-        result += "找到桃園文字\n"
-
-
-
-        box = airport.bounding_box()
-
-
-
-        if box:
-
-
-            result += (
-                f"座標:{box}\n"
-            )
-
-
-            x = box["x"] + box["width"] / 2
-            y = box["y"] + box["height"] / 2
-
-
-            page.mouse.move(
-                x,
-                y
-            )
-
-
-            page.mouse.down()
-
-            page.wait_for_timeout(200)
-
-            page.mouse.up()
-
-
-            result += "完成滑鼠事件\n"
-
-
-
-        else:
-
-            result += "沒有座標\n"
-
+        real_click(
+            page,
+            airport
+        )
 
 
         page.wait_for_timeout(3000)
 
 
 
-        remain = page.locator(
+        result += "TPE完成\n"
+
+
+
+        # 點目的地
+
+        page.get_by_text(
+            "目的地",
+            exact=True
+        ).click(
+            force=True,
+            timeout=5000
+        )
+
+
+        page.wait_for_timeout(3000)
+
+
+
+        # 找 DAD
+
+        dad = page.locator(
             "div.jss829"
         ).filter(
-            has_text="TPE"
-        ).count()
+            has_text="DAD"
+        ).first
 
+
+
+        count = dad.count()
 
 
         result += (
-            "剩餘TPE:"
-            + str(remain)
+            "DAD數量:"
+            + str(count)
             + "\n"
         )
 
 
 
-        if remain == 0:
+        if count > 0:
 
-            result += "成功"
+
+            parent = dad.locator(
+                "xpath=ancestor::div[contains(@class,'MuiBox-root')][1]"
+            )
+
+
+            result += (
+                "找到:\n"
+                + parent.evaluate(
+                    "(e)=>e.outerHTML"
+                )[:300]
+                + "\n"
+            )
+
+
+
+            real_click(
+                page,
+                dad
+            )
+
+
+            page.wait_for_timeout(3000)
+
+
+            result += "已點擊DAD\n"
+
+
 
         else:
 
-            result += "失敗"
+            result += "找不到DAD\n"
+
+
+
+        # 檢查
+
+        remain = page.locator(
+            "div.jss829"
+        ).filter(
+            has_text="DAD"
+        ).count()
+
+
+        result += (
+            "剩餘DAD:"
+            + str(remain)
+            + "\n"
+        )
 
 
 
@@ -167,6 +229,7 @@ try:
 
 
 except Exception as e:
+
 
     send(
         "錯誤:\n"
