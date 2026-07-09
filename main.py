@@ -21,9 +21,8 @@ with sync_playwright() as p:
 
     browser = p.chromium.launch(headless=True)
 
-    page = browser.new_page(
-        locale="zh-TW"
-    )
+    page = browser.new_page(locale="zh-TW")
+
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
@@ -33,68 +32,71 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
 
-    result = "=== Vietjet 測試 ===\n\n"
+    result = "=== 出發地選擇測試 ===\n\n"
 
 
-    # 關閉 Cookie
+    # 關 Cookie
     try:
         page.locator("h5").filter(
             has_text="接受"
-        ).click(
-            timeout=5000
+        ).click(timeout=5000)
+
+        page.wait_for_timeout(2000)
+
+    except:
+        pass
+
+
+    # 點出發地
+
+    page.get_by_text(
+        "出發地點",
+        exact=True
+    ).click(
+        force=True,
+        timeout=5000
+    )
+
+    page.wait_for_timeout(3000)
+
+
+    # 找臺北
+
+    taipei = page.get_by_text(
+        "臺北",
+        exact=False
+    )
+
+
+    result += "臺北選項數量："
+    result += str(taipei.count())
+    result += "\n\n"
+
+
+    if taipei.count() > 0:
+
+        taipei.first.click(
+            force=True
         )
 
         page.wait_for_timeout(3000)
 
-        result += "Cookie關閉成功\n\n"
+        result += "成功選擇臺北\n\n"
 
-    except Exception as e:
-
-        result += "Cookie關閉失敗\n"
-        result += str(e) + "\n\n"
-
-
-    # 確認 Cookie 是否消失
-    body = page.locator("body").inner_text()
-
-    if "我们使用 cookie" in body:
-        result += "Cookie視窗仍存在\n\n"
     else:
-        result += "Cookie視窗已消失\n\n"
+
+        result += "找不到臺北\n\n"
 
 
 
-    # 嘗試點擊出發地
-
-    try:
-
-        page.get_by_text(
-            "出發地點",
-            exact=True
-        ).click(
-            force=True,
-            timeout=5000
-        )
-
-        page.wait_for_timeout(3000)
-
-        result += "出發地點點擊成功\n\n"
-
-
-    except Exception as e:
-
-        result += "出發地點點擊失敗\n"
-        result += str(e) + "\n\n"
-
-
-
-    result += "=== 點擊後文字 ===\n"
+    result += "=== 畫面文字 ===\n"
 
     result += page.locator(
         "body"
-    ).inner_text()[:1200]
+    ).inner_text()[:1000]
 
 
     send(result)
+
 
     browser.close()
