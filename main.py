@@ -19,7 +19,6 @@ def send(text):
     )
 
 
-
 def real_click(page, locator):
 
     box = locator.bounding_box()
@@ -27,16 +26,12 @@ def real_click(page, locator):
     if not box:
         return False
 
-
     x = box["x"] + box["width"]/2
     y = box["y"] + box["height"]/2
 
-
     page.mouse.move(x,y)
     page.mouse.down()
-
     page.wait_for_timeout(200)
-
     page.mouse.up()
 
     return True
@@ -45,18 +40,16 @@ def real_click(page, locator):
 
 try:
 
-    result="=== TPE+DAD最終測試 ===\n\n"
+    result = "=== TPE後目的地DOM ===\n\n"
 
 
     with sync_playwright() as p:
 
-
-        browser=p.chromium.launch(
+        browser = p.chromium.launch(
             headless=True
         )
 
-
-        page=browser.new_page(
+        page = browser.new_page(
             locale="zh-TW"
         )
 
@@ -68,7 +61,6 @@ try:
 
 
         page.wait_for_timeout(10000)
-
 
 
         try:
@@ -101,13 +93,10 @@ try:
 
 
 
-        taiwan = page.get_by_text(
+        page.get_by_text(
             "台灣 (6)",
             exact=True
-        )
-
-
-        taiwan.click(
+        ).click(
             force=True
         )
 
@@ -116,9 +105,7 @@ try:
 
 
 
-        # 找TPE完整區塊
-
-        tpe_box = page.locator(
+        tpe = page.locator(
             "div.MuiBox-root"
         ).filter(
             has_text="TPE"
@@ -127,32 +114,20 @@ try:
         ).first
 
 
-
-        if tpe_box.count():
-
-            result+="找到TPE區塊\n"
-
-
-            real_click(
-                page,
-                tpe_box
-            )
+        real_click(
+            page,
+            tpe
+        )
 
 
-            result+="TPE完成\n"
-
-
-        else:
-
-            result+="找不到TPE\n"
-
+        result += "TPE完成\n"
 
 
         page.wait_for_timeout(5000)
 
 
 
-        # 目的地
+        # 開目的地
 
         page.get_by_text(
             "目的地",
@@ -162,39 +137,49 @@ try:
         )
 
 
+        result += "目的地開啟\n"
+
+
         page.wait_for_timeout(8000)
 
 
 
-        dad = page.locator(
+        codes = page.locator(
             "div.jss829"
-        ).filter(
-            has_text="DAD"
-        ).first
+        )
+
+
+        result += (
+            "jss829數量:"
+            + str(codes.count())
+            + "\n\n"
+        )
 
 
 
-        if dad.count():
+        for i in range(min(codes.count(),60)):
 
-            result+="找到DAD\n"
+            try:
 
+                txt = codes.nth(i).inner_text().strip()
 
-            real_click(
-                page,
-                dad
-            )
+                if txt:
 
+                    result += txt + "\n"
 
-            result+="DAD完成\n"
+            except:
 
-
-        else:
-
-            result+="找不到DAD\n"
+                pass
 
 
 
-        page.wait_for_timeout(3000)
+        body = page.locator(
+            "body"
+        ).inner_text()
+
+
+        result += "\nDAD存在:"
+        result += str("DAD" in body)
 
 
 
