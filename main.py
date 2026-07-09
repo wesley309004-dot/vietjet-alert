@@ -1,29 +1,35 @@
 from playwright.sync_api import sync_playwright
 import os
 import requests
+import time
 
 
-TOKEN=os.environ["TELEGRAM_TOKEN"]
-CHAT_ID=os.environ["TELEGRAM_CHAT_ID"]
+TOKEN = os.environ["TELEGRAM_TOKEN"]
+CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
-def send(t):
+def send(msg):
+
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
-            "chat_id":CHAT_ID,
-            "text":t[:4000]
-        }
+            "chat_id": CHAT_ID,
+            "text": msg[:4000]
+        },
+        timeout=20
     )
+
 
 
 with sync_playwright() as p:
 
-    browser=p.chromium.launch(
+
+    browser = p.chromium.launch(
         headless=True
     )
 
-    page=browser.new_page(
+
+    page = browser.new_page(
         locale="zh-TW"
     )
 
@@ -37,19 +43,28 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
 
+
     # cookie
+
     try:
+
         page.get_by_text(
             "接受",
             exact=True
-        ).click(timeout=3000)
+        ).click(
+            timeout=3000
+        )
 
     except:
+
         pass
 
 
 
+    # =====================
     # 點日期
+    # =====================
+
 
     page.get_by_text(
         "出發日期",
@@ -63,33 +78,27 @@ with sync_playwright() as p:
 
 
 
-    # 找目前月份
+    # =====================
+    # 切換到八月2026
+    # =====================
 
-    month = page.locator(
-        ".rdrMonthAndYearPickers"
-    ).first
-
-
-    print(
-        "目前:",
-        month.inner_text()
-    )
-
-
-
-    # 點下一月直到 2026年8月
 
     while True:
 
-        current=month.inner_text()
+
+        month = page.locator(
+            ".rdrMonthAndYearPickers"
+        ).first.inner_text()
+
 
         print(
-            "月份:",
-            current
+            "目前月份:",
+            month
         )
 
 
-        if current=="八月 2026":
+        if month == "八月 2026":
+
             break
 
 
@@ -102,27 +111,32 @@ with sync_playwright() as p:
 
 
 
-    print("已到八月")
+    print(
+        "到達八月"
+    )
 
 
 
-    # 選日期範例 8/15
+    # =====================
+    # 選出發日期 15
+    # =====================
 
-    days=page.locator(
+
+    days = page.locator(
         ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
     )
 
 
     for i in range(days.count()):
 
-        txt=days.nth(i).inner_text()
 
-        if txt=="15":
+        if days.nth(i).inner_text()=="15":
+
 
             days.nth(i).click()
 
             print(
-                "選到15號"
+                "出發 8/15"
             )
 
             break
@@ -133,9 +147,145 @@ with sync_playwright() as p:
 
 
 
-    send(
-        "日期選取完成"
+    # =====================
+    # 選回程日期 22
+    # =====================
+
+
+    days = page.locator(
+        ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
     )
+
+
+    for i in range(days.count()):
+
+
+        if days.nth(i).inner_text()=="22":
+
+
+            days.nth(i).click()
+
+            print(
+                "回程 8/22"
+            )
+
+            break
+
+
+
+    page.wait_for_timeout(2000)
+
+
+
+    # =====================
+    # 出發地
+    # =====================
+
+
+    inputs = page.locator(
+        "input"
+    )
+
+
+    inputs.nth(2).fill(
+        "TPE"
+    )
+
+
+    page.wait_for_timeout(2000)
+
+
+
+    # 點第一個 TPE 選項
+
+    try:
+
+        page.get_by_text(
+            "TPE",
+            exact=False
+        ).last.click(
+            timeout=5000
+        )
+
+
+        print(
+            "TPE完成"
+        )
+
+
+    except Exception as e:
+
+
+        print(
+            "TPE失敗",
+            e
+        )
+
+
+
+    # =====================
+    # 目的地
+    # =====================
+
+
+    page.locator(
+        "#arrivalPlaceDesktop"
+    ).fill(
+        "PQC"
+    )
+
+
+    page.wait_for_timeout(2000)
+
+
+
+    try:
+
+        page.get_by_text(
+            "PQC",
+            exact=False
+        ).last.click(
+            timeout=5000
+        )
+
+
+        print(
+            "PQC完成"
+        )
+
+
+    except Exception as e:
+
+
+        print(
+            "PQC失敗",
+            e
+        )
+
+
+
+    # =====================
+    # 查詢航班
+    # =====================
+
+
+    page.get_by_text(
+        "查詢航班",
+        exact=True
+    ).click()
+
+
+
+    page.wait_for_timeout(
+        10000
+    )
+
+
+
+    send(
+        "越捷查詢完成"
+    )
+
 
 
     browser.close()
