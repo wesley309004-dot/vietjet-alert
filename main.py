@@ -3,31 +3,30 @@ import os
 import requests
 
 
-TOKEN=os.environ["TELEGRAM_TOKEN"]
-CHAT_ID=os.environ["TELEGRAM_CHAT_ID"]
+TOKEN = os.environ["TELEGRAM_TOKEN"]
+CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
 def send(t):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
-            "chat_id":CHAT_ID,
-            "text":t[:4000]
-        }
+            "chat_id": CHAT_ID,
+            "text": t[:4000]
+        },
+        timeout=20
     )
 
 
 
 with sync_playwright() as p:
 
-
-    browser=p.chromium.launch(
+    browser = p.chromium.launch(
         headless=True
     )
 
 
-
-    page=browser.new_page(
+    page = browser.new_page(
         locale="zh-TW"
     )
 
@@ -53,6 +52,8 @@ with sync_playwright() as p:
 
 
 
+    # 打開日期
+
     page.get_by_text(
         "出發日期",
         exact=True
@@ -61,66 +62,93 @@ with sync_playwright() as p:
     ).click()
 
 
-
     page.wait_for_timeout(
         3000
     )
 
 
-    buttons=page.locator(
-        "button"
+
+    send(
+        "✅ 日期已開啟，開始抓HTML"
     )
 
 
-    result="=== BUTTON DEBUG ===\n\n"
+
+    # 抓可能是calendar的元素
+
+    elements = page.locator(
+        "div,button,svg"
+    )
 
 
-    for i in range(buttons.count()):
+    result = "=== CALENDAR ELEMENT DEBUG ===\n\n"
+
+
+    count = 0
+
+
+    for i in range(elements.count()):
 
         try:
 
-            txt=buttons.nth(i).inner_text()
-
-            aria=buttons.nth(i).get_attribute(
-                "aria-label"
-            )
-
-            title=buttons.nth(i).get_attribute(
-                "title"
+            html = elements.nth(i).evaluate(
+                "(e)=>e.outerHTML"
             )
 
 
-            if txt or aria or title:
+            text = elements.nth(i).inner_text(
+                timeout=500
+            )
 
-                result+=f"""
-BUTTON {i}
+
+            if (
+                "2026" in html
+                or "七月" in html
+                or "八月" in html
+                or "calendar" in html.lower()
+                or "chevron" in html.lower()
+                or "arrow" in html.lower()
+            ):
+
+                result += f"""
+
+--- ELEMENT {i} ---
 
 TEXT:
-{txt}
+{text[:300]}
 
-ARIA:
-{aria}
+HTML:
+{html[:1500]}
 
-TITLE:
-{title}
-
-----------------
+================
 
 """
+
+
+                count += 1
+
+
+                if len(result) > 3500:
+
+                    send(result)
+
+                    result = (
+                        "=== CONTINUE ===\n\n"
+                    )
+
 
         except:
             pass
 
 
 
+    result += (
+        f"\n找到元素數量:{count}"
+    )
+
+
     send(result)
 
 
-    browser.close()
 
-- name: Upload debug
-  if: always()
-  uses: actions/upload-artifact@v4
-  with:
-    name: debug
-    path: debug/
+    browser.close()
