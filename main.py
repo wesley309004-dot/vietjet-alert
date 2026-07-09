@@ -32,10 +32,9 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
 
-    result = "=== TPE選取測試 ===\n\n"
+    result = "=== TPE真正選取測試 ===\n\n"
 
 
-    # 關 Cookie
     try:
         page.locator("h5").filter(
             has_text="接受"
@@ -46,8 +45,6 @@ with sync_playwright() as p:
     except:
         pass
 
-
-    # 開啟出發地
 
     page.get_by_text(
         "出發地點",
@@ -60,48 +57,59 @@ with sync_playwright() as p:
     page.wait_for_timeout(3000)
 
 
-    # 找 TPE
-
     tpe = page.get_by_text(
         "TPE",
         exact=True
     )
 
 
-    result += "TPE數量："
-    result += str(tpe.count())
-    result += "\n\n"
+    result += "TPE數量：" + str(tpe.count()) + "\n\n"
 
 
     if tpe.count() > 0:
 
+        # 往上找祖先層級
+        for level in range(1, 7):
+
+            try:
+
+                parent = tpe.locator(
+                    "xpath=" + "/.." * level
+                )
+
+                text = parent.inner_text()
+
+                result += (
+                    f"第{level}層: "
+                    + text[:100]
+                    + "\n"
+                )
+
+            except:
+                pass
+
+
+        # 嘗試點最大容器
         try:
 
-            # 往上找可點擊的選項容器
-            option = tpe.first.locator(
-                "xpath=ancestor::*[self::div or self::li][1]"
+            parent = tpe.locator(
+                "xpath=" + "/.." * 5
             )
 
-            option.click(
+            parent.click(
                 force=True,
                 timeout=5000
             )
 
             page.wait_for_timeout(3000)
 
-            result += "已點擊TPE選項\n\n"
+            result += "\n已點擊第五層父元素\n"
 
         except Exception as e:
 
-            result += "點擊TPE失敗\n"
-            result += str(e) + "\n\n"
+            result += "\n點擊失敗:\n"
+            result += str(e)
 
-    else:
-
-        result += "找不到TPE\n\n"
-
-
-    # 檢查選單是否還在
 
     body = page.locator(
         "body"
@@ -109,16 +117,11 @@ with sync_playwright() as p:
 
 
     if "最近到達目的地" in body:
-        result += "出發地選單仍存在\n"
+        result += "\n選單仍存在"
     else:
-        result += "出發地選單已關閉\n"
-
-
-    result += "\n=== 畫面前500字 ===\n"
-    result += body[:500]
+        result += "\n選單消失"
 
 
     send(result)
-
 
     browser.close()
