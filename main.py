@@ -7,10 +7,6 @@ TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
-GO_DATE = "2026-10-20"
-RETURN_DATE = "2026-10-24"
-
-
 
 def send(text):
 
@@ -25,283 +21,28 @@ def send(text):
 
 
 
-def log(text):
-
-    print(text)
-    send(text)
-
-
-
-def real_click(page, locator):
-
-    locator.scroll_into_view_if_needed()
-
-    locator.evaluate(
-        """
-        e=>{
-
-            e.dispatchEvent(
-                new MouseEvent(
-                    'mouseover',
-                    {bubbles:true}
-                )
-            );
-
-            e.dispatchEvent(
-                new MouseEvent(
-                    'mousedown',
-                    {bubbles:true}
-                )
-            );
-
-            e.dispatchEvent(
-                new MouseEvent(
-                    'mouseup',
-                    {bubbles:true}
-                )
-            );
-
-            e.click();
-
-        }
-        """
-    )
-
-
-
-def choose_date(page, target):
-
-    year, month, day = target.split("-")
-
-    month = int(month)
-    day = int(day)
-
-
-    log(
-        f"📅目標日期 {year}/{month}/{day}"
-    )
-
-
-    # 找日期視窗文字
-
-    page.wait_for_timeout(3000)
-
-
-
-    # 印目前calendar文字
-
-    try:
-
-        calendar = page.locator(
-            "body"
-        ).inner_text()
-
-
-        send(
-            "目前日期區塊:\n"
-            +
-            calendar[:1000]
-        )
-
-    except:
-
-        pass
-
-
-
-    # 找下一月按鈕
-
-    for i in range(6):
-
-
-        text = page.locator(
-            "body"
-        ).inner_text()
-
-
-        # 已經到目標月份
-
-        if (
-            f"{month}月" in text
-            or
-            f"{month} 月" in text
-        ):
-
-            break
-
-
-
-        buttons = page.locator(
-            "button"
-        )
-
-
-        clicked=False
-
-
-        for j in range(buttons.count()):
-
-            try:
-
-                aria = buttons.nth(j).get_attribute(
-                    "aria-label"
-                )
-
-
-                title = buttons.nth(j).get_attribute(
-                    "title"
-                )
-
-
-                if (
-                    aria
-                    and
-                    (
-                        "next" in aria.lower()
-                        or
-                        "下一" in aria
-                    )
-                ):
-
-                    real_click(
-                        page,
-                        buttons.nth(j)
-                    )
-
-                    clicked=True
-                    break
-
-
-                if (
-                    title
-                    and
-                    (
-                        "next" in title.lower()
-                        or
-                        "下一" in title
-                    )
-                ):
-
-                    real_click(
-                        page,
-                        buttons.nth(j)
-                    )
-
-                    clicked=True
-                    break
-
-
-            except:
-
-                pass
-
-
-
-        if not clicked:
-
-            send(
-                "⚠️找不到下一月按鈕"
-            )
-
-            break
-
-
-        page.wait_for_timeout(2000)
-
-
-
-    # 點日期
-
-    day_locator = page.locator(
-        "button"
-    ).filter(
-        has_text=str(day)
-    ).last
-
-
-    real_click(
-        page,
-        day_locator
-    )
-
-
-    page.wait_for_timeout(5000)
-
-
-
-def select_dates(page):
-
-
-    log(
-        "📅開始選日期"
-    )
-
-
-    page.get_by_text(
-        "出發日期",
-        exact=True
-    ).click(
-        force=True
-    )
-
-
-    page.wait_for_timeout(3000)
-
-
-
-    choose_date(
-        page,
-        GO_DATE
-    )
-
-
-
-    page.get_by_text(
-        "返程日期",
-        exact=True
-    ).click(
-        force=True
-    )
-
-
-    page.wait_for_timeout(3000)
-
-
-
-    choose_date(
-        page,
-        RETURN_DATE
-    )
-
-
-    log(
-        "✅日期完成"
-    )
-
-
-
 def main():
 
-
     send(
-        "🚀日期測試版"
+        "🚀 日期DOM Debug開始"
     )
 
 
     with sync_playwright() as p:
 
 
-        browser=p.chromium.launch(
+        browser = p.chromium.launch(
             headless=True
         )
 
 
-        page=browser.new_page(
+        page = browser.new_page(
             locale="zh-TW"
         )
 
 
         try:
+
 
             page.goto(
                 "https://www.vietjetair.com/zh-TW",
@@ -309,17 +50,141 @@ def main():
             )
 
 
-            page.wait_for_timeout(8000)
-
-
-            select_dates(page)
-
-
-            send(
-                page.locator(
-                    "body"
-                ).inner_text()[:2000]
+            page.wait_for_timeout(
+                10000
             )
+
+
+            try:
+
+                page.get_by_text(
+                    "接受",
+                    exact=True
+                ).click(
+                    timeout=5000
+                )
+
+            except:
+
+                pass
+
+
+
+            result = "=== INPUT DEBUG ===\n\n"
+
+
+            inputs = page.locator(
+                "input"
+            )
+
+
+            result += (
+                "INPUT數量:"
+                +
+                str(inputs.count())
+                +
+                "\n\n"
+            )
+
+
+            for i in range(inputs.count()):
+
+
+                try:
+
+
+                    html = inputs.nth(i).evaluate(
+                        "(e)=>e.outerHTML"
+                    )
+
+
+                    parent = inputs.nth(i).evaluate(
+                        "(e)=>e.parentElement.outerHTML"
+                    )
+
+
+                    value = inputs.nth(i).input_value()
+
+
+
+                    result += f"""
+--- INPUT {i} ---
+
+VALUE:
+{value}
+
+HTML:
+{html[:800]}
+
+PARENT:
+{parent[:1500]}
+
+"""
+
+
+                except Exception as e:
+
+
+                    result += f"""
+INPUT {i} ERROR:
+{e}
+
+"""
+
+
+
+            send(result)
+
+
+
+            for text in [
+                "出發日期",
+                "返程日期"
+            ]:
+
+
+                try:
+
+
+                    loc = page.get_by_text(
+                        text,
+                        exact=True
+                    ).first
+
+
+
+                    html = loc.evaluate(
+                        "(e)=>e.outerHTML"
+                    )
+
+
+                    parent = loc.evaluate(
+                        "(e)=>e.parentElement.outerHTML"
+                    )
+
+
+                    send(
+f"""
+=== {text} ===
+
+HTML:
+{html[:1000]}
+
+
+PARENT:
+{parent[:3000]}
+
+"""
+                    )
+
+
+                except Exception as e:
+
+
+                    send(
+                        f"{text} ERROR\n{e}"
+                    )
+
 
 
         except Exception as e:
@@ -332,12 +197,14 @@ def main():
             )
 
 
+
         finally:
+
 
             browser.close()
 
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
     main()
