@@ -1,6 +1,5 @@
 import os
 import requests
-import time
 from playwright.sync_api import sync_playwright
 
 
@@ -59,11 +58,13 @@ def mouse_click(page, locator):
     if not box:
         return False
 
+
     x = box["x"] + box["width"]/2
     y = box["y"] + box["height"]/2
 
 
     page.mouse.move(x,y)
+
     page.mouse.down()
 
     page.wait_for_timeout(200)
@@ -76,12 +77,14 @@ def mouse_click(page, locator):
 
 def open_page(page):
 
-    log("🌐 開啟 Vietjet")
+    log("🌐 開啟網站")
+
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
     )
+
 
     page.wait_for_timeout(10000)
 
@@ -102,13 +105,13 @@ def accept_cookie(page):
 
     except:
 
-        log("🍪 無Cookie")
+        pass
 
 
 
 def select_departure(page):
 
-    log("🛫 選擇TPE")
+    log("🛫 TPE")
 
 
     page.get_by_text(
@@ -117,6 +120,7 @@ def select_departure(page):
     ).click(
         force=True
     )
+
 
     page.wait_for_timeout(5000)
 
@@ -128,7 +132,9 @@ def select_departure(page):
         force=True
     )
 
+
     page.wait_for_timeout(5000)
+
 
 
     tpe = page.locator(
@@ -142,6 +148,7 @@ def select_departure(page):
     ).first
 
 
+
     mouse_click(
         page,
         tpe
@@ -150,13 +157,14 @@ def select_departure(page):
 
     page.wait_for_timeout(5000)
 
+
     log("✅ TPE完成")
 
 
 
 def select_destination(page):
 
-    log("🛬 選擇DAD")
+    log("🛬 DAD")
 
 
     page.get_by_text(
@@ -168,6 +176,7 @@ def select_destination(page):
 
 
     page.wait_for_timeout(8000)
+
 
 
     dad = page.get_by_text(
@@ -210,14 +219,12 @@ def choose_day(page,date,label):
 
 
     log(
-        f"✅ {label} {date}"
+        f"✅ {label}"
     )
 
 
 
 def select_date(page):
-
-    log("📅 去程")
 
     page.get_by_text(
         "出發日期",
@@ -226,20 +233,19 @@ def select_date(page):
         force=True
     )
 
+
     page.wait_for_timeout(5000)
 
 
     choose_day(
         page,
         GO_DATE,
-        "去程"
+        GO_DATE
     )
 
 
 
 def select_return_date(page):
-
-    log("📅 回程")
 
     page.get_by_text(
         "返程日期",
@@ -248,158 +254,162 @@ def select_return_date(page):
         force=True
     )
 
+
     page.wait_for_timeout(5000)
 
 
     choose_day(
         page,
         RETURN_DATE,
-        "回程"
+        RETURN_DATE
     )
 
 
 
-def check_form(page):
+# ===============================
+# 新增：查詢按鈕Debug
+# ===============================
 
-    text = page.locator(
+def debug_before_search(page):
+
+    log("🔎 查詢前檢查")
+
+
+    body = page.locator(
         "body"
     ).inner_text()
 
 
-    result = []
-
-
-    for key in [
-        "TPE",
-        "DAD",
-        GO_DATE.split("-")[2],
-        RETURN_DATE.split("-")[2]
-    ]:
-
-        if key in text:
-
-            result.append(
-                key+" OK"
-            )
-
-        else:
-
-            result.append(
-                key+" missing"
-            )
-
 
     send(
-        "📝表單檢查\n\n"
+        "查詢前文字:\n\n"
         +
-        "\n".join(result)
+        body[:1500]
     )
 
 
 
-def search_flight(page):
-
-    log("🔍準備查詢")
-
-
-    check_form(page)
+    buttons = page.locator(
+        "button"
+    )
 
 
-    old_url = page.url
-
-
-
-    # 方法1
-
-    try:
-
-        page.get_by_text(
-            "查詢航班",
-            exact=True
-        ).click(
-            force=True
-        )
-
-        log("點擊文字按鈕")
-
-    except:
-
-        pass
+    send(
+        "button數量:"
+        +
+        str(buttons.count())
+    )
 
 
 
-    page.wait_for_timeout(5000)
+    for i in range(min(buttons.count(),20)):
+
+        try:
+
+            txt = buttons.nth(i).inner_text()
+
+            if txt.strip():
+
+                send(
+                    f"button {i}:\n{txt[:100]}"
+                )
+
+        except:
+
+            pass
 
 
 
-    # 方法2
+def click_search(page):
 
-    try:
+    log("🔍 找查詢按鈕")
 
-        page.locator(
-            "button"
-        ).filter(
-            has_text="查詢航班"
-        ).click(
-            force=True
-        )
 
-        log("點擊button")
-
-    except:
-
-        pass
+    debug_before_search(page)
 
 
 
-    # 方法3
+    buttons = page.locator(
+        "button"
+    )
 
-    try:
 
-        page.keyboard.press(
-            "Enter"
-        )
-
-        log("Enter提交")
-
-    except:
-
-        pass
+    found = False
 
 
 
-    for i in range(1,7):
+    for i in range(buttons.count()):
 
-        page.wait_for_timeout(5000)
+        try:
 
-
-        now = page.url
-
-
-        text = page.locator(
-            "body"
-        ).inner_text()
+            txt = buttons.nth(i).inner_text()
 
 
-        send(
-            f"⏱ {i*5}秒\n"
-            f"URL:\n{now}\n\n"
-            f"包含航班:{'航班' in text}\n"
-            f"包含TWD:{'TWD' in text}"
+            if "查詢航班" in txt:
+
+
+                send(
+                    "找到button:\n"
+                    +
+                    txt
+                )
+
+
+                buttons.nth(i).click(
+                    force=True
+                )
+
+
+                found = True
+
+                break
+
+
+        except:
+
+            pass
+
+
+
+    if not found:
+
+        raise Exception(
+            "找不到查詢button"
         )
 
 
-        if now != old_url:
 
-            log("🎯 URL已變更")
-            break
+    log(
+        "✅ 已點查詢"
+    )
+
+
+
+    page.wait_for_timeout(
+        30000
+    )
+
+
+
+    send(
+        "目前URL:\n"
+        +
+        page.url
+    )
+
+
+
+    screenshot(
+        page,
+        "after_click"
+    )
 
 
 
 def main():
 
     send(
-        "🚀 查詢提交Debug開始"
+        "🚀 查詢按鈕DOM Debug"
     )
 
 
@@ -416,6 +426,7 @@ def main():
         )
 
 
+
         try:
 
             open_page(page)
@@ -430,17 +441,11 @@ def main():
 
             select_return_date(page)
 
-            search_flight(page)
-
-
-            screenshot(
-                page,
-                "after_search"
-            )
+            click_search(page)
 
 
             send(
-                "🎉 Debug完成"
+                "🎉 完成"
             )
 
 
@@ -454,7 +459,9 @@ def main():
 
 
             send(
-                "❌錯誤\n"+str(e)
+                "❌錯誤\n"
+                +
+                str(e)
             )
 
 
