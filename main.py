@@ -19,10 +19,36 @@ def send(text):
     )
 
 
+def real_click(page, locator):
+
+    box = locator.bounding_box()
+
+    if box:
+
+        x = box["x"] + box["width"] / 2
+        y = box["y"] + box["height"] / 2
+
+
+        page.mouse.move(
+            x,
+            y
+        )
+
+        page.mouse.down()
+
+        page.wait_for_timeout(200)
+
+        page.mouse.up()
+
+        return True
+
+    return False
+
+
 
 try:
 
-    result = "=== DAD定位測試 ===\n\n"
+    result = "=== DAD真實點擊測試 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -64,6 +90,8 @@ try:
 
 
 
+        # 開目的地
+
         page.get_by_text(
             "目的地",
             exact=True
@@ -77,47 +105,66 @@ try:
 
 
 
-        dad_all = page.locator(
-            "text=DAD"
-        )
+        dad = page.locator(
+            "div.jss829"
+        ).filter(
+            has_text="DAD"
+        ).first
 
 
-        count = dad_all.count()
+
+        result += "找到DAD\n"
+
 
 
         result += (
-            "DAD元素數量:"
-            + str(count)
+            "座標:"
+            + str(dad.bounding_box())
             + "\n\n"
         )
 
 
 
-        for i in range(count):
+        if real_click(
+            page,
+            dad
+        ):
 
-            try:
+            result += "滑鼠點擊完成\n"
 
-                txt = dad_all.nth(i).inner_text()
+        else:
 
-                html = dad_all.nth(i).evaluate(
-                    "(e)=>e.outerHTML"
-                )
-
-
-                result += (
-                    "第"
-                    + str(i)
-                    + "\n"
-                    + txt
-                    + "\n"
-                    + html[:300]
-                    + "\n\n"
-                )
+            result += "沒有座標\n"
 
 
-            except Exception as e:
 
-                result += str(e)
+        page.wait_for_timeout(3000)
+
+
+
+        remain = page.locator(
+            "div.jss829"
+        ).filter(
+            has_text="DAD"
+        ).count()
+
+
+
+        result += (
+            "剩餘DAD:"
+            + str(remain)
+            + "\n"
+        )
+
+
+
+        if remain == 0:
+
+            result += "目的地選取成功"
+
+        else:
+
+            result += "目的地仍開啟"
 
 
 
