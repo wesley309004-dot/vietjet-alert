@@ -40,7 +40,6 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
 
-
     try:
         page.get_by_text(
             "接受",
@@ -53,81 +52,67 @@ with sync_playwright() as p:
 
 
 
-    date_text=page.get_by_text(
+    page.get_by_text(
         "出發日期",
         exact=True
-    ).first
-
-
-
-    button=date_text.locator(
+    ).first.locator(
         "xpath=ancestor::div[@role='button'][1]"
-    )
+    ).click()
 
-
-    send(
-        "日期按鈕數量:"
-        +
-        str(button.count())
-    )
-
-
-
-    html=button.evaluate(
-        "(e)=>e.outerHTML"
-    )
-
-
-    send(
-        "日期按鈕HTML:\n"
-        +
-        html[:2000]
-    )
-
-
-
-    button.evaluate(
-        """
-        e=>{
-            e.dispatchEvent(
-                new MouseEvent(
-                    'mouseover',
-                    {bubbles:true}
-                )
-            );
-            e.dispatchEvent(
-                new MouseEvent(
-                    'mousedown',
-                    {bubbles:true}
-                )
-            );
-            e.dispatchEvent(
-                new MouseEvent(
-                    'mouseup',
-                    {bubbles:true}
-                )
-            );
-            e.click();
-        }
-        """
-    )
 
 
     page.wait_for_timeout(
-        5000
+        3000
     )
 
 
-    body=page.locator(
-        "body"
-    ).inner_text()
-
-
-    send(
-        "點擊後:\n"
-        +
-        body[:3000]
+    buttons=page.locator(
+        "button"
     )
+
+
+    result="=== BUTTON DEBUG ===\n\n"
+
+
+    for i in range(buttons.count()):
+
+        try:
+
+            txt=buttons.nth(i).inner_text()
+
+            aria=buttons.nth(i).get_attribute(
+                "aria-label"
+            )
+
+            title=buttons.nth(i).get_attribute(
+                "title"
+            )
+
+
+            if txt or aria or title:
+
+                result+=f"""
+BUTTON {i}
+
+TEXT:
+{txt}
+
+ARIA:
+{aria}
+
+TITLE:
+{title}
+
+----------------
+
+"""
+
+        except:
+            pass
+
+
+
+    send(result)
 
 
     browser.close()
