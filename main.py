@@ -19,64 +19,21 @@ def send(text):
     )
 
 
-def real_click(page, locator):
-
-    box = locator.bounding_box()
-
-    if not box:
-        return False
-
-    x = box["x"] + box["width"]/2
-    y = box["y"] + box["height"]/2
-
-
-    page.mouse.move(x,y)
-    page.mouse.down()
-    page.wait_for_timeout(200)
-    page.mouse.up()
-
-    return True
-
-
-
-def find_code(page, code):
-
-    items = page.locator(
-        "div.jss829"
-    )
-
-
-    for i in range(items.count()):
-
-        try:
-
-            if items.nth(i).inner_text().strip() == code:
-
-                return items.nth(i)
-
-        except:
-
-            pass
-
-
-    return None
-
-
 
 try:
 
-    result="=== TPE修正版 ===\n\n"
+    result = "=== 台灣展開後檢查 ===\n\n"
 
 
     with sync_playwright() as p:
 
 
-        browser=p.chromium.launch(
+        browser = p.chromium.launch(
             headless=True
         )
 
 
-        page=browser.new_page(
+        page = browser.new_page(
             locale="zh-TW"
         )
 
@@ -99,7 +56,7 @@ try:
                 timeout=5000
             )
 
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(2000)
 
         except:
 
@@ -119,55 +76,51 @@ try:
 
 
 
-        # 先找台灣
-
         taiwan = page.get_by_text(
             "台灣 (6)",
             exact=True
         )
 
 
+        taiwan.click(
+            force=True
+        )
+
+
+        page.wait_for_timeout(8000)
+
+
+
+        boxes = page.locator(
+            "div.MuiBox-root"
+        )
+
+
         result += (
-            "台灣數量:"
-            + str(taiwan.count())
-            + "\n"
+            "Box數量:"
+            + str(boxes.count())
+            + "\n\n"
         )
 
 
-        if taiwan.count():
 
-            real_click(
-                page,
-                taiwan
-            )
+        for i in range(boxes.count()):
 
-            result+="展開台灣\n"
+            try:
 
+                txt = boxes.nth(i).inner_text()
 
-        page.wait_for_timeout(5000)
+                if "桃園" in txt or "TPE" in txt or "臺北" in txt:
 
+                    result += (
+                        "找到區塊:\n"
+                        + txt
+                        + "\n\n"
+                    )
 
+            except:
 
-        tpe=find_code(
-            page,
-            "TPE"
-        )
-
-
-        if tpe:
-
-            result+="找到TPE\n"
-
-            real_click(
-                page,
-                tpe
-            )
-
-            result+="TPE點擊完成\n"
-
-        else:
-
-            result+="還是找不到TPE\n"
+                pass
 
 
 
@@ -181,5 +134,6 @@ try:
 except Exception as e:
 
     send(
-        "錯誤:\n"+str(e)
+        "錯誤:\n"
+        + str(e)
     )
