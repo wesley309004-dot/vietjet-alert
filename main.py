@@ -32,10 +32,10 @@ with sync_playwright() as p:
 
     # Cookie
     try:
-        page.get_by_text("接受").click(timeout=3000)
-        page.wait_for_timeout(3000)
-    except:
-        pass
+    page.locator("button").filter(has_text="接受").click(timeout=5000)
+    page.wait_for_timeout(3000)
+except Exception as e:
+    print(e)
 
 
     result = "=== 出發地測試 ===\n\n"
