@@ -23,6 +23,7 @@ with sync_playwright() as p:
 
     page = browser.new_page(locale="zh-TW")
 
+
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
@@ -31,10 +32,10 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
 
-    result = "=== TPE選項分析 ===\n\n"
+    result = "=== TPE選取測試 ===\n\n"
 
 
-    # 關閉 Cookie
+    # 關 Cookie
     try:
         page.locator("h5").filter(
             has_text="接受"
@@ -59,40 +60,65 @@ with sync_playwright() as p:
     page.wait_for_timeout(3000)
 
 
-    # 搜尋相關文字
+    # 找 TPE
 
-    keywords = [
+    tpe = page.get_by_text(
         "TPE",
-        "中國台北",
-        "Taipei",
-        "桃園"
-    ]
+        exact=True
+    )
 
 
-    for k in keywords:
+    result += "TPE數量："
+    result += str(tpe.count())
+    result += "\n\n"
 
-        elements = page.get_by_text(
-            k,
-            exact=False
-        )
 
-        result += f"\n關鍵字 {k} 數量：{elements.count()}\n"
+    if tpe.count() > 0:
 
-        for i in range(min(elements.count(),3)):
+        try:
 
-            try:
-                html = elements.nth(i).evaluate(
-                    "(e)=>e.outerHTML"
-                )
+            # 往上找可點擊的選項容器
+            option = tpe.first.locator(
+                "xpath=ancestor::*[self::div or self::li][1]"
+            )
 
-                result += f"\n--- {k} {i} ---\n"
-                result += html[:600]
-                result += "\n"
+            option.click(
+                force=True,
+                timeout=5000
+            )
 
-            except:
-                pass
+            page.wait_for_timeout(3000)
+
+            result += "已點擊TPE選項\n\n"
+
+        except Exception as e:
+
+            result += "點擊TPE失敗\n"
+            result += str(e) + "\n\n"
+
+    else:
+
+        result += "找不到TPE\n\n"
+
+
+    # 檢查選單是否還在
+
+    body = page.locator(
+        "body"
+    ).inner_text()
+
+
+    if "最近到達目的地" in body:
+        result += "出發地選單仍存在\n"
+    else:
+        result += "出發地選單已關閉\n"
+
+
+    result += "\n=== 畫面前500字 ===\n"
+    result += body[:500]
 
 
     send(result)
+
 
     browser.close()
