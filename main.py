@@ -26,6 +26,7 @@ with sync_playwright() as p:
     )
 
 
+
     page=browser.new_page(
         locale="zh-TW"
     )
@@ -116,3 +117,10 @@ TITLE:
 
 
     browser.close()
+
+- name: Upload debug
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: debug
+    path: debug/
