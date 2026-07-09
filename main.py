@@ -20,9 +20,38 @@ def send(text):
 
 
 
+def real_click(page, locator):
+
+    box = locator.bounding_box()
+
+    if not box:
+        return False
+
+
+    x = box["x"] + box["width"] / 2
+    y = box["y"] + box["height"] / 2
+
+
+    page.mouse.move(
+        x,
+        y
+    )
+
+    page.mouse.down()
+
+    page.wait_for_timeout(200)
+
+    page.mouse.up()
+
+
+    return True
+
+
+
 try:
 
-    result = "=== DAD等待測試 ===\n\n"
+    result = "=== DAD正式選取測試 ===\n\n"
+
 
 
     with sync_playwright() as p:
@@ -56,7 +85,7 @@ try:
                 timeout=5000
             )
 
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(2000)
 
         except:
 
@@ -64,67 +93,130 @@ try:
 
 
 
+        # 出發地
+
+        page.get_by_text(
+            "出發地點",
+            exact=True
+        ).click(
+            force=True
+        )
+
+
+        page.wait_for_timeout(3000)
+
+
+
+        tpe = page.locator(
+            "div.jss830"
+        ).filter(
+            has_text="桃園國際機場"
+        ).first
+
+
+
+        real_click(
+            page,
+            tpe
+        )
+
+
+        page.wait_for_timeout(3000)
+
+
+
+        result += "TPE完成\n"
+
+
+
+        # 目的地
+
         page.get_by_text(
             "目的地",
             exact=True
         ).click(
-            force=True,
-            timeout=5000
+            force=True
         )
 
 
-        result += "已開目的地\n"
-
-
-        page.wait_for_timeout(8000)
+        page.wait_for_timeout(5000)
 
 
 
-        body = page.locator(
-            "body"
-        ).inner_text()
-
-
-
-        if "DAD" in body:
-
-            result += "body找到DAD\n"
-
-        else:
-
-            result += "body沒有DAD\n"
-
-
+        # 找DAD
 
         codes = page.locator(
             "div.jss829"
         )
 
 
-        count = codes.count()
+        target = None
 
 
-        result += (
-            "jss829數量:"
-            + str(count)
-            + "\n\n"
-        )
-
-
-
-        for i in range(min(count,50)):
+        for i in range(codes.count()):
 
             try:
 
-                txt = codes.nth(i).inner_text()
+                if codes.nth(i).inner_text().strip() == "DAD":
 
-                if txt.strip():
+                    target = codes.nth(i)
 
-                    result += txt + "\n"
+                    break
 
             except:
 
                 pass
+
+
+
+        if target:
+
+
+            result += "找到DAD\n"
+
+
+
+            result += (
+                "座標:"
+                + str(target.bounding_box())
+                + "\n"
+            )
+
+
+
+            real_click(
+                page,
+                target
+            )
+
+
+            result += "已滑鼠點擊\n"
+
+
+
+        else:
+
+            result += "找不到DAD\n"
+
+
+
+        page.wait_for_timeout(3000)
+
+
+
+        remain = page.locator(
+            "div.jss829"
+        ).filter(
+            has_text="DAD"
+        ).count()
+
+
+
+        result += (
+            "剩餘DAD:"
+            + str(remain)
+            + "\n"
+        )
 
 
 
