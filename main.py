@@ -11,9 +11,6 @@ GO_DATE = "2026-10-20"
 RETURN_DATE = "2026-10-24"
 
 
-api_logs = []
-
-
 
 def send(text):
 
@@ -35,57 +32,6 @@ def log(text):
 
 
 
-def setup_response(page):
-
-
-    def handler(res):
-
-        url = res.url.lower()
-
-
-        keys = [
-            "flight",
-            "fare",
-            "price",
-            "availability",
-            "journey",
-            "segment",
-            "search",
-            "booking"
-        ]
-
-
-        if any(
-            k in url
-            for k in keys
-        ):
-
-
-            try:
-
-                body = res.text()
-
-            except:
-
-                body=""
-
-
-            api_logs.append(
-                {
-                    "status":res.status,
-                    "url":res.url,
-                    "body":body[:1000]
-                }
-            )
-
-
-    page.on(
-        "response",
-        handler
-    )
-
-
-
 def real_click(page, locator):
 
     locator.scroll_into_view_if_needed()
@@ -93,6 +39,7 @@ def real_click(page, locator):
     locator.evaluate(
         """
         e=>{
+
             e.dispatchEvent(
                 new MouseEvent(
                     'mouseover',
@@ -115,32 +62,45 @@ def real_click(page, locator):
             );
 
             e.click();
+
         }
         """
     )
 
 
 
-def open_page(page):
+def choose_date(page, target):
 
-    page.goto(
-        "https://www.vietjetair.com/zh-TW",
-        timeout=60000
+    year, month, day = target.split("-")
+
+    month = int(month)
+    day = int(day)
+
+
+    log(
+        f"📅目標日期 {year}/{month}/{day}"
     )
 
-    page.wait_for_timeout(10000)
+
+    # 找日期視窗文字
+
+    page.wait_for_timeout(3000)
 
 
 
-def cookie(page):
+    # 印目前calendar文字
 
     try:
 
-        page.get_by_text(
-            "接受",
-            exact=True
-        ).click(
-            timeout=5000
+        calendar = page.locator(
+            "body"
+        ).inner_text()
+
+
+        send(
+            "目前日期區塊:\n"
+            +
+            calendar[:1000]
         )
 
     except:
@@ -149,44 +109,119 @@ def cookie(page):
 
 
 
-def select_tpe(page):
+    # 找下一月按鈕
 
-    page.get_by_text(
-        "出發地點",
-        exact=True
-    ).click(
-        force=True
-    )
-
-    page.wait_for_timeout(5000)
+    for i in range(6):
 
 
-    page.get_by_text(
-        "台灣 (6)",
-        exact=True
-    ).click(
-        force=True
-    )
+        text = page.locator(
+            "body"
+        ).inner_text()
 
 
-    page.wait_for_timeout(5000)
+        # 已經到目標月份
+
+        if (
+            f"{month}月" in text
+            or
+            f"{month} 月" in text
+        ):
+
+            break
 
 
-    code = page.locator(
-        "div.jss829"
+
+        buttons = page.locator(
+            "button"
+        )
+
+
+        clicked=False
+
+
+        for j in range(buttons.count()):
+
+            try:
+
+                aria = buttons.nth(j).get_attribute(
+                    "aria-label"
+                )
+
+
+                title = buttons.nth(j).get_attribute(
+                    "title"
+                )
+
+
+                if (
+                    aria
+                    and
+                    (
+                        "next" in aria.lower()
+                        or
+                        "下一" in aria
+                    )
+                ):
+
+                    real_click(
+                        page,
+                        buttons.nth(j)
+                    )
+
+                    clicked=True
+                    break
+
+
+                if (
+                    title
+                    and
+                    (
+                        "next" in title.lower()
+                        or
+                        "下一" in title
+                    )
+                ):
+
+                    real_click(
+                        page,
+                        buttons.nth(j)
+                    )
+
+                    clicked=True
+                    break
+
+
+            except:
+
+                pass
+
+
+
+        if not clicked:
+
+            send(
+                "⚠️找不到下一月按鈕"
+            )
+
+            break
+
+
+        page.wait_for_timeout(2000)
+
+
+
+    # 點日期
+
+    day_locator = page.locator(
+        "button"
     ).filter(
-        has_text="TPE"
-    ).first
-
-
-    box = code.locator(
-        "xpath=ancestor::div[contains(@class,'MuiBox-root')][1]"
-    )
+        has_text=str(day)
+    ).last
 
 
     real_click(
         page,
-        box
+        day_locator
     )
 
 
@@ -194,57 +229,13 @@ def select_tpe(page):
 
 
 
-def select_dad(page):
+def select_dates(page):
 
-    page.get_by_text(
-        "目的地",
-        exact=True
-    ).click(
-        force=True
+
+    log(
+        "📅開始選日期"
     )
 
-
-    page.wait_for_timeout(8000)
-
-
-    dad = page.get_by_text(
-        "DAD",
-        exact=True
-    ).last
-
-
-    real_click(
-        page,
-        dad
-    )
-
-
-    page.wait_for_timeout(5000)
-
-
-
-def choose_day(page,date):
-
-    day=date.split("-")[2]
-
-
-    target=page.get_by_text(
-        str(int(day)),
-        exact=True
-    ).last
-
-
-    real_click(
-        page,
-        target
-    )
-
-
-    page.wait_for_timeout(3000)
-
-
-
-def dates(page):
 
     page.get_by_text(
         "出發日期",
@@ -254,13 +245,15 @@ def dates(page):
     )
 
 
-    page.wait_for_timeout(5000)
+    page.wait_for_timeout(3000)
 
 
-    choose_day(
+
+    choose_date(
         page,
         GO_DATE
     )
+
 
 
     page.get_by_text(
@@ -271,92 +264,27 @@ def dates(page):
     )
 
 
-    page.wait_for_timeout(5000)
+    page.wait_for_timeout(3000)
 
 
-    choose_day(
+
+    choose_date(
         page,
         RETURN_DATE
     )
 
 
-
-def search(page):
-
-    btn = page.get_by_text(
-        "查詢航班",
-        exact=True
-    ).last
-
-
-    btn.evaluate(
-        "(e)=>e.click()"
-    )
-
-
-    page.wait_for_timeout(
-        40000
-    )
-
-
     log(
-        "URL:\n"
-        +
-        page.url
+        "✅日期完成"
     )
-
-
-
-def analyze_result(page):
-
-
-    send(
-        "API數量:"
-        +
-        str(len(api_logs))
-    )
-
-
-    for x in api_logs[:10]:
-
-        send(
-            f"""
-STATUS:
-{x['status']}
-
-URL:
-{x['url'][:400]}
-
-BODY:
-{x['body'][:800]}
-"""
-        )
-
-
-
-    try:
-
-        text = page.locator(
-            "body"
-        ).inner_text()
-
-
-        send(
-            "結果頁文字:\n"
-            +
-            text[:2000]
-        )
-
-    except:
-
-        pass
 
 
 
 def main():
 
+
     send(
-        "🚀 select-flight抓取開始"
+        "🚀日期測試版"
     )
 
 
@@ -375,29 +303,27 @@ def main():
 
         try:
 
-            setup_response(page)
+            page.goto(
+                "https://www.vietjetair.com/zh-TW",
+                timeout=60000
+            )
 
-            open_page(page)
 
-            cookie(page)
+            page.wait_for_timeout(8000)
 
-            select_tpe(page)
 
-            select_dad(page)
-
-            dates(page)
-
-            search(page)
-
-            analyze_result(page)
+            select_dates(page)
 
 
             send(
-                "🎉完成"
+                page.locator(
+                    "body"
+                ).inner_text()[:2000]
             )
 
 
         except Exception as e:
+
 
             send(
                 "❌錯誤\n"
