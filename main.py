@@ -3,16 +3,12 @@ import requests
 from playwright.sync_api import sync_playwright
 
 
-FROM = "TPE"
-TO = "DAD"
-
-GO_DATE = "2026-10-20"
-RETURN_DATE = "2026-10-24"
-
-
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
+
+FROM = "TPE"
+TO = "DAD"
 
 
 def send(text):
@@ -35,26 +31,9 @@ def log(text):
 
 
 
-def mouse_click(page, locator):
-
-    box = locator.bounding_box()
-
-    if not box:
-        return False
-
-
-    page.mouse.click(
-        box["x"] + box["width"]/2,
-        box["y"] + box["height"]/2
-    )
-
-    return True
-
-
-
 def open_page(page):
 
-    log("🌐 開啟")
+    log("🌐 開啟 Vietjet")
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
@@ -76,7 +55,7 @@ def cookie(page):
             timeout=5000
         )
 
-        log("🍪 Cookie")
+        log("🍪 Cookie完成")
 
     except:
 
@@ -84,7 +63,89 @@ def cookie(page):
 
 
 
-def departure(page):
+def real_click(page, locator):
+
+    locator.scroll_into_view_if_needed()
+
+    locator.evaluate(
+        """
+        e => {
+
+            e.dispatchEvent(
+                new MouseEvent(
+                    'mouseover',
+                    {
+                        bubbles:true
+                    }
+                )
+            );
+
+
+            e.dispatchEvent(
+                new MouseEvent(
+                    'mousedown',
+                    {
+                        bubbles:true
+                    }
+                )
+            );
+
+
+            e.dispatchEvent(
+                new MouseEvent(
+                    'mouseup',
+                    {
+                        bubbles:true
+                    }
+                )
+            );
+
+
+            e.click();
+
+        }
+        """
+    )
+
+
+
+def check_inputs(page):
+
+    result=[]
+
+    inputs=page.locator(
+        "input"
+    )
+
+
+    for i in range(inputs.count()):
+
+        try:
+
+            value=inputs.nth(i).input_value()
+
+
+            result.append(
+                f"{i}: {value}"
+            )
+
+        except:
+
+            pass
+
+
+    send(
+        "目前INPUT:\n"
+        +
+        "\n".join(result)
+    )
+
+
+
+def select_tpe(page):
+
+    log("🇹🇼 選TPE")
+
 
     page.get_by_text(
         "出發地點",
@@ -93,7 +154,9 @@ def departure(page):
         force=True
     )
 
+
     page.wait_for_timeout(5000)
+
 
 
     page.get_by_text(
@@ -103,10 +166,12 @@ def departure(page):
         force=True
     )
 
+
     page.wait_for_timeout(5000)
 
 
-    tpe = page.locator(
+
+    option = page.locator(
         "div"
     ).filter(
         has_text="臺北"
@@ -117,19 +182,33 @@ def departure(page):
     ).first
 
 
-    mouse_click(
+
+    send(
+        "TPE HTML:\n"
+        +
+        option.evaluate(
+            "(e)=>e.outerHTML"
+        )[:1000]
+    )
+
+
+    real_click(
         page,
-        tpe
+        option
     )
 
 
     page.wait_for_timeout(5000)
 
-    log("✅ TPE")
+
+    check_inputs(page)
 
 
 
-def destination(page):
+def select_dad(page):
+
+    log("🛬 選DAD")
+
 
     page.get_by_text(
         "目的地",
@@ -138,183 +217,59 @@ def destination(page):
         force=True
     )
 
+
     page.wait_for_timeout(8000)
 
 
-    dad = page.get_by_text(
-        TO,
+
+    option = page.get_by_text(
+        "DAD",
         exact=True
     ).last
-
-
-    mouse_click(
-        page,
-        dad
-    )
-
-
-    page.wait_for_timeout(5000)
-
-    log("✅ DAD")
-
-
-
-def choose_day(page,date):
-
-    day = date.split("-")[2]
-
-
-    target = page.get_by_text(
-        str(int(day)),
-        exact=True
-    ).last
-
-
-    mouse_click(
-        page,
-        target
-    )
-
-
-    page.wait_for_timeout(3000)
-
-
-
-def dates(page):
-
-    page.get_by_text(
-        "出發日期",
-        exact=True
-    ).click(
-        force=True
-    )
-
-
-    page.wait_for_timeout(5000)
-
-
-    choose_day(
-        page,
-        GO_DATE
-    )
-
-
-    page.get_by_text(
-        "返程日期",
-        exact=True
-    ).click(
-        force=True
-    )
-
-
-    page.wait_for_timeout(5000)
-
-
-    choose_day(
-        page,
-        RETURN_DATE
-    )
-
-
-    log("✅ 日期")
-
-
-
-# =====================
-# 新增：Input檢查
-# =====================
-
-def inspect_inputs(page):
-
-    log("🔎 檢查INPUT")
-
-
-    inputs = page.locator(
-        "input"
-    )
-
-
-    result = []
-
-
-
-    for i in range(inputs.count()):
-
-        try:
-
-            value = inputs.nth(i).input_value()
-
-        except:
-
-            value = "ERROR"
-
-
-
-        try:
-
-            placeholder = inputs.nth(i).get_attribute(
-                "placeholder"
-            )
-
-        except:
-
-            placeholder = ""
-
-
-
-        try:
-
-            aria = inputs.nth(i).get_attribute(
-                "aria-label"
-            )
-
-        except:
-
-            aria = ""
-
-
-
-        result.append(
-            f"""
-INPUT {i}
-
-value:
-{value}
-
-placeholder:
-{placeholder}
-
-aria:
-{aria}
-"""
-        )
 
 
 
     send(
-        "INPUT結果:\n"
+        "DAD HTML:\n"
         +
-        "\n".join(result[:20])
+        option.evaluate(
+            "(e)=>e.outerHTML"
+        )
     )
+
+
+
+    real_click(
+        page,
+        option
+    )
+
+
+    page.wait_for_timeout(5000)
+
+
+    check_inputs(page)
 
 
 
 def main():
 
+
     send(
-        "🚀 Input State Debug"
+        "🚀 React Select Debug開始"
     )
+
 
 
     with sync_playwright() as p:
 
 
-        browser = p.chromium.launch(
+        browser=p.chromium.launch(
             headless=True
         )
 
 
-        page = browser.new_page(
+        page=browser.new_page(
             locale="zh-TW"
         )
 
@@ -325,15 +280,9 @@ def main():
 
             cookie(page)
 
-            departure(page)
+            select_tpe(page)
 
-            destination(page)
-
-            dates(page)
-
-
-            inspect_inputs(page)
-
+            select_dad(page)
 
 
             send(
@@ -343,8 +292,10 @@ def main():
 
         except Exception as e:
 
+
             send(
-                "❌錯誤\n"+str(e)
+                "❌錯誤\n"
+                +str(e)
             )
 
 
