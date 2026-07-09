@@ -3,157 +3,139 @@ import os
 import requests
 
 
-TOKEN = os.environ["TELEGRAM_TOKEN"]
-CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+TOKEN=os.environ["TELEGRAM_TOKEN"]
+CHAT_ID=os.environ["TELEGRAM_CHAT_ID"]
 
 
 def send(t):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
-            "chat_id": CHAT_ID,
-            "text": t[:4000]
-        },
-        timeout=20
+            "chat_id":CHAT_ID,
+            "text":t[:4000]
+        }
     )
 
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(
+    browser=p.chromium.launch(
         headless=True
     )
 
-
-    page = browser.new_page(
+    page=browser.new_page(
         locale="zh-TW"
     )
 
 
+    page.goto(
+        "https://www.vietjetair.com/zh-TW",
+        timeout=60000
+    )
+
+
+    page.wait_for_timeout(8000)
+
+
+    # cookie
     try:
-
-        send("🚀 Calendar DOM完整測試開始")
-
-
-        page.goto(
-            "https://www.vietjetair.com/zh-TW",
-            timeout=60000
-        )
-
-
-        page.wait_for_timeout(
-            8000
-        )
-
-
-        try:
-
-            page.get_by_text(
-                "接受",
-                exact=True
-            ).click(
-                timeout=3000
-            )
-
-        except:
-
-            pass
-
-
-
-        # 開啟日期
-
         page.get_by_text(
-            "出發日期",
+            "接受",
             exact=True
-        ).first.locator(
-            "xpath=ancestor::div[@role='button'][1]"
-        ).click()
+        ).click(timeout=3000)
+
+    except:
+        pass
 
 
 
-        page.wait_for_timeout(
-            3000
+    # 點日期
+
+    page.get_by_text(
+        "出發日期",
+        exact=True
+    ).first.locator(
+        "xpath=ancestor::div[@role='button'][1]"
+    ).click()
+
+
+    page.wait_for_timeout(2000)
+
+
+
+    # 找目前月份
+
+    month = page.locator(
+        ".rdrMonthAndYearPickers"
+    ).first
+
+
+    print(
+        "目前:",
+        month.inner_text()
+    )
+
+
+
+    # 點下一月直到 2026年8月
+
+    while True:
+
+        current=month.inner_text()
+
+        print(
+            "月份:",
+            current
         )
 
 
-        send(
-            "✅ 日期面板已開啟"
-        )
+        if current=="八月 2026":
+            break
+
+
+        page.locator(
+            "button.rdrNextButton"
+        ).first.click()
+
+
+        page.wait_for_timeout(500)
 
 
 
-        # 找月份
-
-        month = page.get_by_text(
-            "七月 2026",
-            exact=True
-        ).first
+    print("已到八月")
 
 
 
-        if month.count() == 0:
+    # 選日期範例 8/15
 
-            send(
-                "❌ 找不到 七月2026"
+    days=page.locator(
+        ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
+    )
+
+
+    for i in range(days.count()):
+
+        txt=days.nth(i).inner_text()
+
+        if txt=="15":
+
+            days.nth(i).click()
+
+            print(
+                "選到15號"
             )
 
-        else:
-
-
-            send(
-                "✅ 找到七月2026\n\n"
-                +
-                month.evaluate(
-                    "(e)=>e.outerHTML"
-                )[:2000]
-            )
+            break
 
 
 
-            for i in range(1,8):
-
-                try:
-
-                    html = month.locator(
-                        "xpath=" + "/.." * i
-                    ).evaluate(
-                        "(e)=>e.outerHTML"
-                    )
-
-
-                    send(
-f"""
-===== 第{i}層 =====
-
-{html[:3500]}
-
-"""
-                    )
-
-
-                except Exception as e:
-
-                    send(
-                        f"第{i}層錯誤\n{e}"
-                    )
+    page.wait_for_timeout(1000)
 
 
 
-        send(
-            "🎉 Calendar DOM測試完成"
-        )
+    send(
+        "日期選取完成"
+    )
 
 
-    except Exception as e:
-
-        send(
-            "❌錯誤\n"
-            +
-            str(e)
-        )
-
-
-    finally:
-
-        browser.close()
+    browser.close()
