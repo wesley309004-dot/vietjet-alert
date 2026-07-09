@@ -20,20 +20,43 @@ def send(text):
 
 
 
+def real_click(page, locator):
+
+    box = locator.bounding_box()
+
+    if not box:
+        return False
+
+
+    x = box["x"] + box["width"]/2
+    y = box["y"] + box["height"]/2
+
+
+    page.mouse.move(x,y)
+    page.mouse.down()
+
+    page.wait_for_timeout(200)
+
+    page.mouse.up()
+
+    return True
+
+
+
 try:
 
-    result = "=== 台灣展開後檢查 ===\n\n"
+    result="=== TPE+DAD最終測試 ===\n\n"
 
 
     with sync_playwright() as p:
 
 
-        browser = p.chromium.launch(
+        browser=p.chromium.launch(
             headless=True
         )
 
 
-        page = browser.new_page(
+        page=browser.new_page(
             locale="zh-TW"
         )
 
@@ -56,13 +79,15 @@ try:
                 timeout=5000
             )
 
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(3000)
 
         except:
 
             pass
 
 
+
+        # 出發地
 
         page.get_by_text(
             "出發地點",
@@ -87,40 +112,89 @@ try:
         )
 
 
+        page.wait_for_timeout(5000)
+
+
+
+        # 找TPE完整區塊
+
+        tpe_box = page.locator(
+            "div.MuiBox-root"
+        ).filter(
+            has_text="TPE"
+        ).filter(
+            has_text="桃園國際機場"
+        ).first
+
+
+
+        if tpe_box.count():
+
+            result+="找到TPE區塊\n"
+
+
+            real_click(
+                page,
+                tpe_box
+            )
+
+
+            result+="TPE完成\n"
+
+
+        else:
+
+            result+="找不到TPE\n"
+
+
+
+        page.wait_for_timeout(5000)
+
+
+
+        # 目的地
+
+        page.get_by_text(
+            "目的地",
+            exact=True
+        ).click(
+            force=True
+        )
+
+
         page.wait_for_timeout(8000)
 
 
 
-        boxes = page.locator(
-            "div.MuiBox-root"
-        )
-
-
-        result += (
-            "Box數量:"
-            + str(boxes.count())
-            + "\n\n"
-        )
+        dad = page.locator(
+            "div.jss829"
+        ).filter(
+            has_text="DAD"
+        ).first
 
 
 
-        for i in range(boxes.count()):
+        if dad.count():
 
-            try:
+            result+="找到DAD\n"
 
-                txt = boxes.nth(i).inner_text()
 
-                if "桃園" in txt or "TPE" in txt or "臺北" in txt:
+            real_click(
+                page,
+                dad
+            )
 
-                    result += (
-                        "找到區塊:\n"
-                        + txt
-                        + "\n\n"
-                    )
 
-            except:
+            result+="DAD完成\n"
 
-                pass
+
+        else:
+
+            result+="找不到DAD\n"
+
+
+
+        page.wait_for_timeout(3000)
 
 
 
@@ -134,6 +208,5 @@ try:
 except Exception as e:
 
     send(
-        "錯誤:\n"
-        + str(e)
+        "錯誤:\n"+str(e)
     )
