@@ -21,7 +21,7 @@ def send(text):
 
 try:
 
-    result = "=== TPE點擊V3 ===\n\n"
+    result = "=== TPE滑鼠事件測試 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -76,40 +76,57 @@ try:
 
 
 
-        # 找 TPE
+        # 找桃園機場文字
 
-        tpe = page.locator(
-            "div.jss829"
+        airport = page.locator(
+            "div.jss830"
         ).filter(
-            has_text="TPE"
+            has_text="桃園國際機場"
         ).first
 
 
 
-        result += "找到TPE\n"
+        result += "找到桃園文字\n"
 
 
 
-        # 找城市名稱臺北
-
-        city = tpe.locator(
-            "xpath=../div[contains(@class,'jss828')]"
-        )
-
-
-        result += (
-            "城市文字:"
-            + city.inner_text()
-            + "\n"
-        )
+        box = airport.bounding_box()
 
 
 
-        # 點城市
+        if box:
 
-        city.click(
-            force=True
-        )
+
+            result += (
+                f"座標:{box}\n"
+            )
+
+
+            x = box["x"] + box["width"] / 2
+            y = box["y"] + box["height"] / 2
+
+
+            page.mouse.move(
+                x,
+                y
+            )
+
+
+            page.mouse.down()
+
+            page.wait_for_timeout(200)
+
+            page.mouse.up()
+
+
+            result += "完成滑鼠事件\n"
+
+
+
+        else:
+
+            result += "沒有座標\n"
+
 
 
         page.wait_for_timeout(3000)
@@ -125,47 +142,11 @@ try:
 
 
         result += (
-            "第一次後TPE:"
+            "剩餘TPE:"
             + str(remain)
             + "\n"
         )
 
-
-
-        if remain > 0:
-
-
-            # 重新抓，避免 stale
-
-            tpe2 = page.locator(
-                "div.jss829"
-            ).filter(
-                has_text="TPE"
-            ).first
-
-
-            tpe2.press(
-                "Enter"
-            )
-
-
-            page.wait_for_timeout(3000)
-
-
-
-        remain = page.locator(
-            "div.jss829"
-        ).filter(
-            has_text="TPE"
-        ).count()
-
-
-
-        result += (
-            "最後TPE:"
-            + str(remain)
-            + "\n"
-        )
 
 
         if remain == 0:
