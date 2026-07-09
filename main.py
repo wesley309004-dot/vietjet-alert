@@ -1,15 +1,16 @@
 import os
-import time
 import requests
-from playwright.sync_api import sync_playwright, TimeoutError
+from playwright.sync_api import sync_playwright
 
 
 # =========================
-# 設定區
+# 設定
 # =========================
 
 FROM = "TPE"
 TO = "DAD"
+
+GO_DATE = "2026-10-30"
 
 DEBUG = True
 
@@ -18,52 +19,36 @@ TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
+
 # =========================
 # Telegram
 # =========================
 
 def send(text):
 
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={
-                "chat_id": CHAT_ID,
-                "text": text
-            },
-            timeout=20
-        )
-
-    except Exception as e:
-        print(e)
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": text
+        },
+        timeout=20
+    )
 
 
 
-# =========================
-# 工具
-# =========================
+def log(text):
 
-def log(msg):
-
-    print(msg)
+    print(text)
 
     if DEBUG:
-        send(msg)
+        send(text)
 
 
 
-def screenshot(page, name):
-
-    try:
-        page.screenshot(
-            path=f"{name}.png",
-            full_page=True
-        )
-
-    except:
-        pass
-
-
+# =========================
+# 滑鼠點擊
+# =========================
 
 def mouse_click(page, locator):
 
@@ -73,28 +58,42 @@ def mouse_click(page, locator):
         return False
 
 
-    x = box["x"] + box["width"] / 2
-    y = box["y"] + box["height"] / 2
+    x = box["x"] + box["width"]/2
+    y = box["y"] + box["height"]/2
 
 
-    page.mouse.move(
-        x,
-        y
-    )
-
+    page.mouse.move(x,y)
     page.mouse.down()
 
     page.wait_for_timeout(200)
 
     page.mouse.up()
 
-
     return True
 
 
 
 # =========================
-# 開首頁
+# 截圖
+# =========================
+
+def shot(page,name):
+
+    try:
+
+        page.screenshot(
+            path=name+".png",
+            full_page=True
+        )
+
+    except:
+
+        pass
+
+
+
+# =========================
+# 首頁
 # =========================
 
 def open_page(page):
@@ -127,7 +126,6 @@ def accept_cookie(page):
             timeout=5000
         )
 
-
         log("🍪 Cookie完成")
 
 
@@ -138,7 +136,7 @@ def accept_cookie(page):
 
 
 # =========================
-# 選出發地
+# 出發地
 # =========================
 
 def select_departure(page):
@@ -158,33 +156,17 @@ def select_departure(page):
 
 
 
-    # 展開台灣
-
-    try:
-
-        page.get_by_text(
-            "台灣 (6)",
-            exact=True
-        ).click(
-            force=True
-        )
-
-
-        log("🇹🇼 展開台灣")
-
-
-    except:
-
-        log("⚠️ 找不到台灣分類")
-
+    page.get_by_text(
+        "台灣 (6)",
+        exact=True
+    ).click(
+        force=True
+    )
 
 
     page.wait_for_timeout(5000)
 
 
-
-    # 不用jss
-    # 用完整文字區塊
 
     tpe = page.locator(
         "div"
@@ -198,17 +180,11 @@ def select_departure(page):
 
 
 
-    if tpe.count() == 0:
-
-        screenshot(
-            page,
-            "error_departure"
-        )
+    if tpe.count()==0:
 
         raise Exception(
             "找不到TPE"
         )
-
 
 
     mouse_click(
@@ -225,7 +201,7 @@ def select_departure(page):
 
 
 # =========================
-# 選目的地
+# 目的地
 # =========================
 
 def select_destination(page):
@@ -245,7 +221,6 @@ def select_destination(page):
 
 
 
-    # 不用class
     dad = page.get_by_text(
         TO,
         exact=True
@@ -253,17 +228,11 @@ def select_destination(page):
 
 
 
-    if dad.count() == 0:
-
-        screenshot(
-            page,
-            "error_destination"
-        )
+    if dad.count()==0:
 
         raise Exception(
-            f"找不到{TO}"
+            "找不到DAD"
         )
-
 
 
     mouse_click(
@@ -275,8 +244,87 @@ def select_destination(page):
     page.wait_for_timeout(5000)
 
 
+    log("✅ DAD完成")
+
+
+
+# =========================
+# 日期
+# =========================
+
+def select_date(page):
+
+
+    log("📅 開啟日期")
+
+
+    page.get_by_text(
+        "出發日期",
+        exact=True
+    ).click(
+        force=True
+    )
+
+
+    page.wait_for_timeout(5000)
+
+
+
+    year,month,day = GO_DATE.split("-")
+
+
+
+    target_month = f"{year}/{int(month)}"
+
+
+
+    # 看目前日曆
+
+    body = page.locator(
+        "body"
+    ).inner_text()
+
+
+
     log(
-        f"✅ {TO}完成"
+        "目前日期頁面確認"
+    )
+
+
+
+    # 找日期按鈕
+
+    dates = page.get_by_text(
+        str(int(day)),
+        exact=True
+    )
+
+
+
+    if dates.count()==0:
+
+        shot(
+            page,
+            "date_error"
+        )
+
+        raise Exception(
+            "找不到日期"
+        )
+
+
+
+    mouse_click(
+        page,
+        dates.last
+    )
+
+
+    page.wait_for_timeout(3000)
+
+
+    log(
+        f"✅ 日期完成 {GO_DATE}"
     )
 
 
@@ -289,7 +337,7 @@ def main():
 
 
     send(
-        "🚀 Vietjet監控開始"
+        "🚀 Vietjet開始"
     )
 
 
@@ -306,8 +354,8 @@ def main():
         )
 
 
-
         try:
+
 
             open_page(page)
 
@@ -317,20 +365,22 @@ def main():
 
             select_destination(page)
 
-
-            screenshot(
-                page,
-                "success_airport"
-            )
+            select_date(page)
 
 
             send(
-                "🎉 出發地+目的地完成"
+                "🎉 機場+日期完成"
             )
 
 
 
         except Exception as e:
+
+
+            shot(
+                page,
+                "error"
+            )
 
 
             send(
@@ -339,19 +389,14 @@ def main():
             )
 
 
-            screenshot(
-                page,
-                "error_final"
-            )
-
-
 
         finally:
+
 
             browser.close()
 
 
 
-if __name__ == "__main__":
+if __name__=="__main__":
 
     main()
