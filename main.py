@@ -18,30 +18,35 @@ def send(text):
         }
     )
 
-    print("Telegram 回應:")
-    print(r.status_code)
-    print(r.text)
+    print("Telegram:", r.status_code, r.text)
 
 
 try:
 
-    print("=== 程式開始 ===")
+    print("=== 開始 ===")
+
+    result = "=== Vietjet TPE DOM Debug ===\n\n"
 
 
     with sync_playwright() as p:
 
-        print("啟動瀏覽器")
 
         browser = p.chromium.launch(
             headless=True
         )
 
+
         page = browser.new_page(
-            locale="zh-TW"
+            locale="zh-TW",
+            viewport={
+                "width":1280,
+                "height":900
+            }
         )
 
 
-        print("開啟 Vietjet")
+        print("開啟網站")
+
 
         page.goto(
             "https://www.vietjetair.com/zh-TW",
@@ -49,18 +54,13 @@ try:
         )
 
 
-        print("等待頁面載入")
-
         page.wait_for_timeout(8000)
 
 
-        result = "=== TPE選項定位 ===\n\n"
 
+        # Cookie
 
-        # 接受 Cookie
         try:
-
-            print("嘗試接受 Cookie")
 
             page.locator("h5").filter(
                 has_text="接受"
@@ -70,16 +70,16 @@ try:
 
             page.wait_for_timeout(2000)
 
-            print("Cookie 完成")
+            print("Cookie關閉")
 
         except:
 
-            print("沒有 Cookie 視窗")
+            print("沒有Cookie")
 
 
-        # 點擊出發地點
 
-        print("點擊出發地點")
+        print("點擊出發地")
+
 
         page.get_by_text(
             "出發地點",
@@ -93,10 +93,21 @@ try:
         page.wait_for_timeout(3000)
 
 
-        print("搜尋 TPE")
+
+        # 截圖
+
+        page.screenshot(
+            path="vietjet_debug.png",
+            full_page=True
+        )
 
 
-        divs = page.locator("div").filter(
+        print("搜尋TPE")
+
+
+        divs = page.locator(
+            "div"
+        ).filter(
             has_text="TPE"
         )
 
@@ -104,69 +115,69 @@ try:
         count = divs.count()
 
 
+        result += f"TPE div數量：{count}\n\n"
+
+
         print(
-            "找到 TPE div:",
+            "找到:",
             count
         )
 
 
-        result += "包含TPE div數量："
-        result += str(count)
-        result += "\n\n"
 
-
-        clicked = False
-
-
-        for i in range(min(count, 10)):
+        for i in range(count):
 
             try:
 
-                txt = divs.nth(i).inner_text()
-
-                print(
-                    "第",
-                    i,
-                    "個:",
-                    txt[:100]
+                txt = divs.nth(i).inner_text(
+                    timeout=3000
                 )
 
 
-                if "桃園" in txt:
+                html = divs.nth(i).evaluate(
+                    "(e)=>e.outerHTML"
+                )
 
 
-                    result += "找到選項:\n"
-                    result += txt[:300]
-                    result += "\n\n"
+                print(
+                    "\n第",
+                    i,
+                    "個"
+                )
+
+                print(
+                    repr(txt[:300])
+                )
 
 
-                    divs.nth(i).click(
-                        force=True,
-                        timeout=5000
-                    )
+                result += (
+                    "\n================\n"
+                )
 
+                result += (
+                    f"第 {i} 個\n\n"
+                )
 
-                    page.wait_for_timeout(3000)
+                result += (
+                    "TEXT:\n"
+                    + txt[:500]
+                    + "\n\n"
+                )
 
-
-                    result += "已點擊此區塊\n"
-
-                    clicked = True
-
-                    break
+                result += (
+                    "HTML:\n"
+                    + html[:500]
+                    + "\n"
+                )
 
 
             except Exception as e:
 
-                print(
-                    "定位錯誤:",
-                    e
+                result += (
+                    f"\n第{i}個錯誤:"
+                    + str(e)
+                    + "\n"
                 )
-
-
-        if not clicked:
-
-            result += "沒有成功點擊桃園選項\n"
 
 
 
@@ -177,15 +188,14 @@ try:
 
         if "最近到達目的地" in body:
 
-            result += "\n選單仍存在"
+            result += "\n\n選單仍存在"
 
         else:
 
-            result += "\n選單已關閉"
+            result += "\n\n選單可能關閉"
 
 
 
-        print("=====結果=====")
         print(result)
 
 
@@ -200,10 +210,9 @@ except Exception as e:
 
 
     error = (
-        "Vietjet監控錯誤:\n\n"
+        "程式錯誤:\n\n"
         + str(e)
     )
-
 
     print(error)
 
