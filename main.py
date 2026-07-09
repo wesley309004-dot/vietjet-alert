@@ -11,6 +11,7 @@ FROM = "TPE"
 TO = "DAD"
 
 GO_DATE = "2026-10-30"
+RETURN_DATE = "2026-11-04"
 
 DEBUG = True
 
@@ -47,7 +48,7 @@ def log(text):
 
 
 # =========================
-# 滑鼠點擊
+# 工具
 # =========================
 
 def mouse_click(page, locator):
@@ -73,11 +74,7 @@ def mouse_click(page, locator):
 
 
 
-# =========================
-# 截圖
-# =========================
-
-def shot(page,name):
+def screenshot(page,name):
 
     try:
 
@@ -126,6 +123,7 @@ def accept_cookie(page):
             timeout=5000
         )
 
+
         log("🍪 Cookie完成")
 
 
@@ -141,7 +139,7 @@ def accept_cookie(page):
 
 def select_departure(page):
 
-    log("🛫 開啟出發地")
+    log("🛫 選擇出發地")
 
 
     page.get_by_text(
@@ -206,7 +204,7 @@ def select_departure(page):
 
 def select_destination(page):
 
-    log("🛬 開啟目的地")
+    log("🛬 選擇目的地")
 
 
     page.get_by_text(
@@ -249,13 +247,12 @@ def select_destination(page):
 
 
 # =========================
-# 日期
+# 日期選擇
 # =========================
 
 def select_date(page):
 
-
-    log("📅 開啟日期")
+    log("📅 選擇日期")
 
 
     page.get_by_text(
@@ -270,53 +267,26 @@ def select_date(page):
 
 
 
-    year,month,day = GO_DATE.split("-")
+    day = GO_DATE.split("-")[2]
 
 
-
-    target_month = f"{year}/{int(month)}"
-
-
-
-    # 看目前日曆
-
-    body = page.locator(
-        "body"
-    ).inner_text()
-
-
-
-    log(
-        "目前日期頁面確認"
-    )
-
-
-
-    # 找日期按鈕
-
-    dates = page.get_by_text(
+    date = page.get_by_text(
         str(int(day)),
         exact=True
-    )
+    ).last
 
 
 
-    if dates.count()==0:
-
-        shot(
-            page,
-            "date_error"
-        )
+    if date.count()==0:
 
         raise Exception(
-            "找不到日期"
+            "找不到去程日期"
         )
-
 
 
     mouse_click(
         page,
-        dates.last
+        date
     )
 
 
@@ -324,7 +294,109 @@ def select_date(page):
 
 
     log(
-        f"✅ 日期完成 {GO_DATE}"
+        f"✅ 去程日期 {GO_DATE}"
+    )
+
+
+
+# =========================
+# 回程日期
+# =========================
+
+def select_return_date(page):
+
+    log("📅 選擇回程日期")
+
+
+    page.get_by_text(
+        "返程日期",
+        exact=True
+    ).click(
+        force=True
+    )
+
+
+    page.wait_for_timeout(5000)
+
+
+
+    day = RETURN_DATE.split("-")[2]
+
+
+    date = page.get_by_text(
+        str(int(day)),
+        exact=True
+    ).last
+
+
+
+    if date.count()==0:
+
+        raise Exception(
+            "找不到回程日期"
+        )
+
+
+    mouse_click(
+        page,
+        date
+    )
+
+
+    page.wait_for_timeout(3000)
+
+
+    log(
+        f"✅ 回程日期 {RETURN_DATE}"
+    )
+
+
+
+# =========================
+# 查詢航班
+# =========================
+
+def search_flight(page):
+
+    log("🔍 查詢航班")
+
+
+    button = page.get_by_text(
+        "查詢航班",
+        exact=True
+    )
+
+
+
+    if button.count()==0:
+
+        raise Exception(
+            "找不到查詢按鈕"
+        )
+
+
+    button.click(
+        force=True
+    )
+
+
+    log(
+        "⏳ 等待結果"
+    )
+
+
+    page.wait_for_timeout(15000)
+
+
+
+    screenshot(
+        page,
+        "search_result"
+    )
+
+
+    log(
+        "✅ 查詢完成"
     )
 
 
@@ -354,6 +426,7 @@ def main():
         )
 
 
+
         try:
 
 
@@ -367,9 +440,13 @@ def main():
 
             select_date(page)
 
+            select_return_date(page)
+
+            search_flight(page)
+
 
             send(
-                "🎉 機場+日期完成"
+                "🎉 已進入航班查詢"
             )
 
 
@@ -377,7 +454,7 @@ def main():
         except Exception as e:
 
 
-            shot(
+            screenshot(
                 page,
                 "error"
             )
@@ -391,7 +468,6 @@ def main():
 
 
         finally:
-
 
             browser.close()
 
