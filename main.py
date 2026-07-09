@@ -53,39 +53,81 @@ with sync_playwright() as p:
 
 
 
-    target=page.get_by_text(
+    date_text=page.get_by_text(
         "出發日期",
         exact=True
     ).first
 
 
 
-    for i in range(1,6):
-
-        try:
-
-            html=target.locator(
-                "xpath=" + "/.."*i
-            ).evaluate(
-                "(e)=>e.outerHTML"
-            )
+    button=date_text.locator(
+        "xpath=ancestor::div[@role='button'][1]"
+    )
 
 
-            send(
-f"""
-===== 第{i}層 =====
-
-{html[:2000]}
-"""
-            )
+    send(
+        "日期按鈕數量:"
+        +
+        str(button.count())
+    )
 
 
-        except Exception as e:
 
-            send(
-                f"{i} ERROR {e}"
-            )
+    html=button.evaluate(
+        "(e)=>e.outerHTML"
+    )
 
+
+    send(
+        "日期按鈕HTML:\n"
+        +
+        html[:2000]
+    )
+
+
+
+    button.evaluate(
+        """
+        e=>{
+            e.dispatchEvent(
+                new MouseEvent(
+                    'mouseover',
+                    {bubbles:true}
+                )
+            );
+            e.dispatchEvent(
+                new MouseEvent(
+                    'mousedown',
+                    {bubbles:true}
+                )
+            );
+            e.dispatchEvent(
+                new MouseEvent(
+                    'mouseup',
+                    {bubbles:true}
+                )
+            );
+            e.click();
+        }
+        """
+    )
+
+
+    page.wait_for_timeout(
+        5000
+    )
+
+
+    body=page.locator(
+        "body"
+    ).inner_text()
+
+
+    send(
+        "點擊後:\n"
+        +
+        body[:3000]
+    )
 
 
     browser.close()
