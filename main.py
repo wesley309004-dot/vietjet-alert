@@ -19,6 +19,25 @@ def send(text):
     )
 
 
+def real_click(page, locator):
+
+    box = locator.bounding_box()
+
+    if not box:
+        return False
+
+    x = box["x"] + box["width"]/2
+    y = box["y"] + box["height"]/2
+
+
+    page.mouse.move(x,y)
+    page.mouse.down()
+    page.wait_for_timeout(200)
+    page.mouse.up()
+
+    return True
+
+
 
 def find_code(page, code):
 
@@ -44,49 +63,20 @@ def find_code(page, code):
 
 
 
-def real_click(page, locator):
-
-    box = locator.bounding_box()
-
-    if not box:
-
-        return False
-
-
-    x = box["x"] + box["width"]/2
-    y = box["y"] + box["height"]/2
-
-
-    page.mouse.move(
-        x,
-        y
-    )
-
-    page.mouse.down()
-
-    page.wait_for_timeout(200)
-
-    page.mouse.up()
-
-
-    return True
-
-
-
 try:
 
-    result = "=== TPE+DAD測試 ===\n\n"
+    result="=== TPE修正版 ===\n\n"
 
 
     with sync_playwright() as p:
 
 
-        browser = p.chromium.launch(
+        browser=p.chromium.launch(
             headless=True
         )
 
 
-        page = browser.new_page(
+        page=browser.new_page(
             locale="zh-TW"
         )
 
@@ -117,8 +107,6 @@ try:
 
 
 
-        # 出發地
-
         page.get_by_text(
             "出發地點",
             exact=True
@@ -131,7 +119,36 @@ try:
 
 
 
-        tpe = find_code(
+        # 先找台灣
+
+        taiwan = page.get_by_text(
+            "台灣 (6)",
+            exact=True
+        )
+
+
+        result += (
+            "台灣數量:"
+            + str(taiwan.count())
+            + "\n"
+        )
+
+
+        if taiwan.count():
+
+            real_click(
+                page,
+                taiwan
+            )
+
+            result+="展開台灣\n"
+
+
+        page.wait_for_timeout(5000)
+
+
+
+        tpe=find_code(
             page,
             "TPE"
         )
@@ -139,80 +156,18 @@ try:
 
         if tpe:
 
-            result += "找到TPE\n"
+            result+="找到TPE\n"
 
             real_click(
                 page,
                 tpe
             )
 
-            result += "TPE點擊完成\n"
+            result+="TPE點擊完成\n"
 
         else:
 
-            result += "找不到TPE\n"
-
-
-
-        page.wait_for_timeout(4000)
-
-
-
-        # 目的地
-
-        page.get_by_text(
-            "目的地",
-            exact=True
-        ).click(
-            force=True
-        )
-
-
-        page.wait_for_timeout(8000)
-
-
-
-        dad = find_code(
-            page,
-            "DAD"
-        )
-
-
-        if dad:
-
-            result += "找到DAD\n"
-
-            real_click(
-                page,
-                dad
-            )
-
-            result += "DAD點擊完成\n"
-
-        else:
-
-            result += "找不到DAD\n"
-
-
-
-        page.wait_for_timeout(3000)
-
-
-
-        # 看欄位文字
-
-        text = page.locator(
-            "body"
-        ).inner_text()
-
-
-        if "DAD" in text:
-
-            result += "頁面仍有DAD\n"
-
-        else:
-
-            result += "DAD消失\n"
+            result+="還是找不到TPE\n"
 
 
 
@@ -225,8 +180,6 @@ try:
 
 except Exception as e:
 
-
     send(
-        "錯誤:\n"
-        + str(e)
+        "錯誤:\n"+str(e)
     )
