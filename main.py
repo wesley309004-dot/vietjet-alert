@@ -19,36 +19,10 @@ def send(text):
     )
 
 
-def real_click(page, locator):
-
-    box = locator.bounding_box()
-
-    if box:
-
-        x = box["x"] + box["width"] / 2
-        y = box["y"] + box["height"] / 2
-
-
-        page.mouse.move(
-            x,
-            y
-        )
-
-        page.mouse.down()
-
-        page.wait_for_timeout(200)
-
-        page.mouse.up()
-
-        return True
-
-    return False
-
-
 
 try:
 
-    result = "=== DAD真實點擊測試 ===\n\n"
+    result = "=== DAD等待測試 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -70,7 +44,7 @@ try:
         )
 
 
-        page.wait_for_timeout(8000)
+        page.wait_for_timeout(10000)
 
 
 
@@ -82,15 +56,13 @@ try:
                 timeout=5000
             )
 
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(3000)
 
         except:
 
             pass
 
 
-
-        # 開目的地
 
         page.get_by_text(
             "目的地",
@@ -101,70 +73,58 @@ try:
         )
 
 
-        page.wait_for_timeout(5000)
+        result += "已開目的地\n"
+
+
+        page.wait_for_timeout(8000)
 
 
 
-        dad = page.locator(
+        body = page.locator(
+            "body"
+        ).inner_text()
+
+
+
+        if "DAD" in body:
+
+            result += "body找到DAD\n"
+
+        else:
+
+            result += "body沒有DAD\n"
+
+
+
+        codes = page.locator(
             "div.jss829"
-        ).filter(
-            has_text="DAD"
-        ).first
+        )
 
 
-
-        result += "找到DAD\n"
-
+        count = codes.count()
 
 
         result += (
-            "座標:"
-            + str(dad.bounding_box())
+            "jss829數量:"
+            + str(count)
             + "\n\n"
         )
 
 
 
-        if real_click(
-            page,
-            dad
-        ):
+        for i in range(min(count,50)):
 
-            result += "滑鼠點擊完成\n"
+            try:
 
-        else:
+                txt = codes.nth(i).inner_text()
 
-            result += "沒有座標\n"
+                if txt.strip():
 
+                    result += txt + "\n"
 
+            except:
 
-        page.wait_for_timeout(3000)
-
-
-
-        remain = page.locator(
-            "div.jss829"
-        ).filter(
-            has_text="DAD"
-        ).count()
-
-
-
-        result += (
-            "剩餘DAD:"
-            + str(remain)
-            + "\n"
-        )
-
-
-
-        if remain == 0:
-
-            result += "目的地選取成功"
-
-        else:
-
-            result += "目的地仍開啟"
+                pass
 
 
 
