@@ -9,8 +9,6 @@ TO = "DAD"
 GO_DATE = "2026-10-20"
 RETURN_DATE = "2026-10-24"
 
-DEBUG = True
-
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
@@ -33,21 +31,7 @@ def send(text):
 def log(text):
 
     print(text)
-
-    if DEBUG:
-        send(text)
-
-
-
-def screenshot(page,name):
-
-    try:
-        page.screenshot(
-            path=name+".png",
-            full_page=True
-        )
-    except:
-        pass
+    send(text)
 
 
 
@@ -59,17 +43,10 @@ def mouse_click(page, locator):
         return False
 
 
-    x = box["x"] + box["width"]/2
-    y = box["y"] + box["height"]/2
-
-
-    page.mouse.move(x,y)
-
-    page.mouse.down()
-
-    page.wait_for_timeout(200)
-
-    page.mouse.up()
+    page.mouse.click(
+        box["x"] + box["width"]/2,
+        box["y"] + box["height"]/2
+    )
 
     return True
 
@@ -77,14 +54,12 @@ def mouse_click(page, locator):
 
 def open_page(page):
 
-    log("🌐 開啟網站")
-
+    log("🌐 開啟 Vietjet")
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
     )
-
 
     page.wait_for_timeout(10000)
 
@@ -111,7 +86,7 @@ def accept_cookie(page):
 
 def select_departure(page):
 
-    log("🛫 TPE")
+    log("🇹🇼 展開台灣")
 
 
     page.get_by_text(
@@ -148,7 +123,6 @@ def select_departure(page):
     ).first
 
 
-
     mouse_click(
         page,
         tpe
@@ -157,14 +131,13 @@ def select_departure(page):
 
     page.wait_for_timeout(5000)
 
-
     log("✅ TPE完成")
 
 
 
 def select_destination(page):
 
-    log("🛬 DAD")
+    log("🛬 開啟目的地")
 
 
     page.get_by_text(
@@ -176,7 +149,6 @@ def select_destination(page):
 
 
     page.wait_for_timeout(8000)
-
 
 
     dad = page.get_by_text(
@@ -193,12 +165,11 @@ def select_destination(page):
 
     page.wait_for_timeout(5000)
 
-
     log("✅ DAD完成")
 
 
 
-def choose_day(page,date,label):
+def choose_day(page,date):
 
     day = date.split("-")[2]
 
@@ -218,13 +189,11 @@ def choose_day(page,date,label):
     page.wait_for_timeout(3000)
 
 
-    log(
-        f"✅ {label}"
-    )
 
+def select_dates(page):
 
+    log("📅 日期")
 
-def select_date(page):
 
     page.get_by_text(
         "出發日期",
@@ -233,19 +202,14 @@ def select_date(page):
         force=True
     )
 
-
     page.wait_for_timeout(5000)
 
 
     choose_day(
         page,
-        GO_DATE,
         GO_DATE
     )
 
-
-
-def select_return_date(page):
 
     page.get_by_text(
         "返程日期",
@@ -260,148 +224,133 @@ def select_return_date(page):
 
     choose_day(
         page,
-        RETURN_DATE,
         RETURN_DATE
     )
 
 
-
-# ===============================
-# 新增：查詢按鈕Debug
-# ===============================
-
-def debug_before_search(page):
-
-    log("🔎 查詢前檢查")
-
-
-    body = page.locator(
-        "body"
-    ).inner_text()
+    log("✅ 日期完成")
 
 
 
-    send(
-        "查詢前文字:\n\n"
-        +
-        body[:1500]
+# ============================
+# 新增：React查詢追蹤
+# ============================
+
+def setup_network(page):
+
+    requests_log = []
+
+
+    def handle(req):
+
+        url = req.url
+
+
+        if (
+            "api" in url.lower()
+            or "search" in url.lower()
+            or "flight" in url.lower()
+        ):
+
+            requests_log.append(url)
+
+            send(
+                "🌐 Request:\n"
+                + url[:300]
+            )
+
+
+    page.on(
+        "request",
+        handle
     )
 
 
-
-    buttons = page.locator(
-        "button"
-    )
-
-
-    send(
-        "button數量:"
-        +
-        str(buttons.count())
-    )
+    return requests_log
 
 
 
-    for i in range(min(buttons.count(),20)):
+def click_search_debug(page, requests_log):
 
-        try:
+    log("🔍 找查詢文字")
 
-            txt = buttons.nth(i).inner_text()
 
-            if txt.strip():
-
-                send(
-                    f"button {i}:\n{txt[:100]}"
-                )
-
-        except:
-
-            pass
+    target = page.get_by_text(
+        "查詢航班",
+        exact=True
+    ).last
 
 
 
-def click_search(page):
-
-    log("🔍 找查詢按鈕")
-
-
-    debug_before_search(page)
-
-
-
-    buttons = page.locator(
-        "button"
-    )
-
-
-    found = False
-
-
-
-    for i in range(buttons.count()):
-
-        try:
-
-            txt = buttons.nth(i).inner_text()
-
-
-            if "查詢航班" in txt:
-
-
-                send(
-                    "找到button:\n"
-                    +
-                    txt
-                )
-
-
-                buttons.nth(i).click(
-                    force=True
-                )
-
-
-                found = True
-
-                break
-
-
-        except:
-
-            pass
-
-
-
-    if not found:
+    if target.count()==0:
 
         raise Exception(
-            "找不到查詢button"
+            "找不到查詢航班"
         )
 
 
+    html = target.evaluate(
+        "(e)=>e.outerHTML"
+    )
 
-    log(
-        "✅ 已點查詢"
+
+    send(
+        "按鈕HTML:\n"
+        +html[:1000]
     )
 
 
 
-    page.wait_for_timeout(
-        30000
+    parent = target.locator(
+        "xpath=.."
     )
+
+
+    parent_html = parent.evaluate(
+        "(e)=>e.outerHTML"
+    )
+
+
+    send(
+        "父層HTML:\n"
+        +parent_html[:1500]
+    )
+
+
+
+    log("🖱 JS click")
+
+
+    target.evaluate(
+        "(e)=>e.click()"
+    )
+
+
+    page.wait_for_timeout(5000)
+
+
+
+    log("🖱 dispatch click")
+
+
+    target.dispatch_event(
+        "click"
+    )
+
+
+    page.wait_for_timeout(30000)
 
 
 
     send(
-        "目前URL:\n"
-        +
-        page.url
+        "最後URL:\n"
+        +page.url
     )
 
 
-
-    screenshot(
-        page,
-        "after_click"
+    send(
+        "API數量:"
+        +str(len(requests_log))
     )
 
 
@@ -409,7 +358,7 @@ def click_search(page):
 def main():
 
     send(
-        "🚀 查詢按鈕DOM Debug"
+        "🚀 React事件Debug開始"
     )
 
 
@@ -426,8 +375,10 @@ def main():
         )
 
 
-
         try:
+
+            requests_log = setup_network(page)
+
 
             open_page(page)
 
@@ -437,31 +388,25 @@ def main():
 
             select_destination(page)
 
-            select_date(page)
+            select_dates(page)
 
-            select_return_date(page)
-
-            click_search(page)
+            click_search_debug(
+                page,
+                requests_log
+            )
 
 
             send(
-                "🎉 完成"
+                "🎉完成"
             )
+
 
 
         except Exception as e:
 
 
-            screenshot(
-                page,
-                "error"
-            )
-
-
             send(
-                "❌錯誤\n"
-                +
-                str(e)
+                "❌錯誤\n"+str(e)
             )
 
 
