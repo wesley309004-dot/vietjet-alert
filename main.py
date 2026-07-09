@@ -8,27 +8,50 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
 def send(text):
+
+    print("準備發送 Telegram")
+
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-    r = requests.post(
-        url,
-        data={
-            "chat_id": CHAT_ID,
-            "text": text
-        }
-    )
 
-    print("Telegram:", r.status_code, r.text)
+    # Telegram 一則最多約4096字
+    chunks = [
+        text[i:i+3500]
+        for i in range(0, len(text), 3500)
+    ]
+
+
+    for c in chunks:
+
+        r = requests.post(
+            url,
+            data={
+                "chat_id": CHAT_ID,
+                "text": c
+            },
+            timeout=20
+        )
+
+        print(
+            "Telegram狀態:",
+            r.status_code,
+            r.text[:200]
+        )
+
 
 
 try:
 
-    print("=== 開始 ===")
+    print("=== 程式開始 ===")
 
-    result = "=== Vietjet TPE DOM Debug ===\n\n"
+
+    result = "=== Vietjet TPE Debug ===\n"
 
 
     with sync_playwright() as p:
+
+
+        print("啟動瀏覽器")
 
 
         browser = p.chromium.launch(
@@ -37,11 +60,7 @@ try:
 
 
         page = browser.new_page(
-            locale="zh-TW",
-            viewport={
-                "width":1280,
-                "height":900
-            }
+            locale="zh-TW"
         )
 
 
@@ -54,11 +73,12 @@ try:
         )
 
 
+        print("網站完成")
+
+
         page.wait_for_timeout(8000)
 
 
-
-        # Cookie
 
         try:
 
@@ -67,8 +87,6 @@ try:
             ).click(
                 timeout=5000
             )
-
-            page.wait_for_timeout(2000)
 
             print("Cookie關閉")
 
@@ -93,15 +111,6 @@ try:
         page.wait_for_timeout(3000)
 
 
-
-        # 截圖
-
-        page.screenshot(
-            path="vietjet_debug.png",
-            full_page=True
-        )
-
-
         print("搜尋TPE")
 
 
@@ -115,13 +124,13 @@ try:
         count = divs.count()
 
 
-        result += f"TPE div數量：{count}\n\n"
-
-
         print(
-            "找到:",
+            "TPE數量:",
             count
         )
+
+
+        result += f"\nTPE數量:{count}\n"
 
 
 
@@ -129,10 +138,7 @@ try:
 
             try:
 
-                txt = divs.nth(i).inner_text(
-                    timeout=3000
-                )
-
+                txt = divs.nth(i).inner_text()
 
                 html = divs.nth(i).evaluate(
                     "(e)=>e.outerHTML"
@@ -140,63 +146,41 @@ try:
 
 
                 print(
-                    "\n第",
+                    "第",
                     i,
-                    "個"
-                )
-
-                print(
-                    repr(txt[:300])
+                    "個:",
+                    txt[:100]
                 )
 
 
                 result += (
-                    "\n================\n"
+                    "\n---第"
+                    + str(i)
+                    + "個---\n"
                 )
 
                 result += (
-                    f"第 {i} 個\n\n"
+                    txt[:300]
+                    + "\n"
                 )
 
                 result += (
-                    "TEXT:\n"
-                    + txt[:500]
-                    + "\n\n"
-                )
-
-                result += (
-                    "HTML:\n"
-                    + html[:500]
+                    html[:300]
                     + "\n"
                 )
 
 
             except Exception as e:
 
-                result += (
-                    f"\n第{i}個錯誤:"
-                    + str(e)
-                    + "\n"
+                print(
+                    "抓取錯誤",
+                    i,
+                    e
                 )
 
 
 
-        body = page.locator(
-            "body"
-        ).inner_text()
-
-
-        if "最近到達目的地" in body:
-
-            result += "\n\n選單仍存在"
-
-        else:
-
-            result += "\n\n選單可能關閉"
-
-
-
-        print(result)
+        print("準備送Telegram")
 
 
         send(result)
@@ -209,11 +193,13 @@ try:
 except Exception as e:
 
 
-    error = (
-        "程式錯誤:\n\n"
-        + str(e)
+    print(
+        "錯誤:",
+        e
     )
 
-    print(error)
 
-    send(error)
+    send(
+        "Vietjet錯誤:\n"
+        + str(e)
+    )
