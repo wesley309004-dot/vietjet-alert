@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from playwright.sync_api import sync_playwright
 
@@ -153,7 +154,6 @@ def select_departure(page):
     page.wait_for_timeout(5000)
 
 
-
     page.get_by_text(
         "台灣 (6)",
         exact=True
@@ -180,9 +180,7 @@ def select_departure(page):
 
     if tpe.count()==0:
 
-        raise Exception(
-            "找不到TPE"
-        )
+        raise Exception("找不到TPE")
 
 
     mouse_click(
@@ -228,9 +226,8 @@ def select_destination(page):
 
     if dad.count()==0:
 
-        raise Exception(
-            "找不到DAD"
-        )
+        raise Exception("找不到DAD")
+
 
 
     mouse_click(
@@ -247,12 +244,12 @@ def select_destination(page):
 
 
 # =========================
-# 日期選擇
+# 去程日期
 # =========================
 
 def select_date(page):
 
-    log("📅 選擇日期")
+    log("📅 去程日期")
 
 
     page.get_by_text(
@@ -279,9 +276,8 @@ def select_date(page):
 
     if date.count()==0:
 
-        raise Exception(
-            "找不到去程日期"
-        )
+        raise Exception("找不到去程日期")
+
 
 
     mouse_click(
@@ -294,7 +290,7 @@ def select_date(page):
 
 
     log(
-        f"✅ 去程日期 {GO_DATE}"
+        f"✅ 去程 {GO_DATE}"
     )
 
 
@@ -305,7 +301,7 @@ def select_date(page):
 
 def select_return_date(page):
 
-    log("📅 選擇回程日期")
+    log("📅 回程日期")
 
 
     page.get_by_text(
@@ -332,9 +328,8 @@ def select_return_date(page):
 
     if date.count()==0:
 
-        raise Exception(
-            "找不到回程日期"
-        )
+        raise Exception("找不到回程日期")
+
 
 
     mouse_click(
@@ -347,13 +342,13 @@ def select_return_date(page):
 
 
     log(
-        f"✅ 回程日期 {RETURN_DATE}"
+        f"✅ 回程 {RETURN_DATE}"
     )
 
 
 
 # =========================
-# 查詢航班
+# 查詢
 # =========================
 
 def search_flight(page):
@@ -361,43 +356,72 @@ def search_flight(page):
     log("🔍 查詢航班")
 
 
-    button = page.get_by_text(
+    page.get_by_text(
         "查詢航班",
         exact=True
-    )
-
-
-
-    if button.count()==0:
-
-        raise Exception(
-            "找不到查詢按鈕"
-        )
-
-
-    button.click(
+    ).click(
         force=True
     )
 
 
-    log(
-        "⏳ 等待結果"
-    )
+    log("⏳ 等待結果")
 
 
     page.wait_for_timeout(15000)
 
 
+    log("✅ 查詢完成")
 
-    screenshot(
-        page,
-        "search_result"
+
+
+# =========================
+# 價格 Debug
+# =========================
+
+def capture_prices(page):
+
+    log("💰 抓取價格")
+
+
+    text = page.locator(
+        "body"
+    ).inner_text()
+
+
+
+    prices = re.findall(
+        r"\b\d{3,6}\b",
+        text
     )
 
 
-    log(
-        "✅ 查詢完成"
-    )
+
+    result = []
+
+    for p in prices:
+
+        if p not in result:
+
+            result.append(p)
+
+
+
+    if len(result)==0:
+
+        send(
+            "❌ 沒找到價格"
+        )
+
+    else:
+
+        msg = (
+            "💰 找到可能價格:\n\n"
+            +
+            "\n".join(result[:30])
+        )
+
+
+        send(msg)
 
 
 
@@ -409,7 +433,7 @@ def main():
 
 
     send(
-        "🚀 Vietjet開始"
+        "🚀 Vietjet價格Debug開始"
     )
 
 
@@ -424,7 +448,6 @@ def main():
         page = browser.new_page(
             locale="zh-TW"
         )
-
 
 
         try:
@@ -444,9 +467,12 @@ def main():
 
             search_flight(page)
 
+            capture_prices(page)
+
+
 
             send(
-                "🎉 已進入航班查詢"
+                "🎉 價格抓取完成"
             )
 
 
