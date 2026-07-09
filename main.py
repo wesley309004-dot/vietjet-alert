@@ -9,49 +9,23 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send(text):
 
-    print("準備發送 Telegram")
-
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-
-    # Telegram 一則最多約4096字
-    chunks = [
-        text[i:i+3500]
-        for i in range(0, len(text), 3500)
-    ]
-
-
-    for c in chunks:
-
-        r = requests.post(
-            url,
-            data={
-                "chat_id": CHAT_ID,
-                "text": c
-            },
-            timeout=20
-        )
-
-        print(
-            "Telegram狀態:",
-            r.status_code,
-            r.text[:200]
-        )
-
+    requests.post(
+        url,
+        data={
+            "chat_id": CHAT_ID,
+            "text": text
+        }
+    )
 
 
 try:
 
-    print("=== 程式開始 ===")
-
-
-    result = "=== Vietjet TPE Debug ===\n"
+    result = "=== TPE選取測試 ===\n\n"
 
 
     with sync_playwright() as p:
-
-
-        print("啟動瀏覽器")
 
 
         browser = p.chromium.launch(
@@ -73,12 +47,11 @@ try:
         )
 
 
-        print("網站完成")
-
-
         page.wait_for_timeout(8000)
 
 
+
+        # Cookie
 
         try:
 
@@ -88,11 +61,11 @@ try:
                 timeout=5000
             )
 
-            print("Cookie關閉")
+            page.wait_for_timeout(2000)
 
         except:
 
-            print("沒有Cookie")
+            pass
 
 
 
@@ -111,77 +84,78 @@ try:
         page.wait_for_timeout(3000)
 
 
-        print("搜尋TPE")
 
+        # 找 TPE
 
-        divs = page.locator(
-            "div"
+        tpe = page.locator(
+            "div.jss829"
         ).filter(
             has_text="TPE"
         )
 
 
-        count = divs.count()
+        count = tpe.count()
 
 
-        print(
-            "TPE數量:",
-            count
+        result += (
+            "TPE數量:"
+            + str(count)
+            + "\n\n"
         )
 
 
-        result += f"\nTPE數量:{count}\n"
+        if count > 0:
+
+
+            # 找包含桃園國際機場的父層
+
+            option = tpe.first.locator(
+                "xpath=../.."
+            )
+
+
+            result += (
+                "找到選項:\n"
+                + option.inner_text()
+                + "\n\n"
+            )
+
+
+            option.click(
+                force=True,
+                timeout=5000
+            )
+
+
+            page.wait_for_timeout(3000)
+
+
+            result += "已點擊TPE\n"
+
+
+        else:
+
+            result += "找不到TPE\n"
 
 
 
-        for i in range(count):
-
-            try:
-
-                txt = divs.nth(i).inner_text()
-
-                html = divs.nth(i).evaluate(
-                    "(e)=>e.outerHTML"
-                )
-
-
-                print(
-                    "第",
-                    i,
-                    "個:",
-                    txt[:100]
-                )
-
-
-                result += (
-                    "\n---第"
-                    + str(i)
-                    + "個---\n"
-                )
-
-                result += (
-                    txt[:300]
-                    + "\n"
-                )
-
-                result += (
-                    html[:300]
-                    + "\n"
-                )
-
-
-            except Exception as e:
-
-                print(
-                    "抓取錯誤",
-                    i,
-                    e
-                )
+        body = page.locator(
+            "body"
+        ).inner_text()
 
 
 
-        print("準備送Telegram")
+        if "出發地點" in body:
 
+            result += "\n選單仍存在"
+
+        else:
+
+            result += "\n選單已關閉"
+
+
+
+        print(result)
 
         send(result)
 
@@ -193,13 +167,7 @@ try:
 except Exception as e:
 
 
-    print(
-        "錯誤:",
-        e
-    )
-
-
     send(
-        "Vietjet錯誤:\n"
+        "錯誤:\n"
         + str(e)
     )
