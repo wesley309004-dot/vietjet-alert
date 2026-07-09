@@ -5,7 +5,6 @@ from playwright.sync_api import sync_playwright
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-
 def send(text):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
@@ -20,9 +19,7 @@ with sync_playwright() as p:
 
     browser = p.chromium.launch(headless=True)
 
-    page = browser.new_page(
-        locale="zh-TW"
-    )
+    page = browser.new_page(locale="zh-TW")
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
@@ -31,8 +28,6 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(8000)
 
-
-    # Cookie
     try:
         page.get_by_text("接受").click(timeout=3000)
         page.wait_for_timeout(3000)
@@ -40,49 +35,40 @@ with sync_playwright() as p:
         pass
 
 
-    result = "=== 泰越捷頁面測試 ===\n\n"
+    result = "=== 元件分析 ===\n\n"
 
 
-    # 找文字中的貨幣
-    body = page.locator("body").inner_text()
+    # 找 role
+    combos = page.locator('[role="combobox"]')
 
-    if "USD" in body:
-        result += "目前偵測到貨幣：USD\n"
+    result += "Combobox數量：" + str(combos.count()) + "\n\n"
 
-    if "TWD" in body:
-        result += "目前偵測到貨幣：TWD\n"
-
-
-    # 列出 input
-    inputs = page.locator("input")
-
-    result += "\n輸入框數量：" + str(inputs.count()) + "\n\n"
-
-
-    for i in range(inputs.count()):
+    for i in range(combos.count()):
         try:
             result += (
                 f"{i}: "
-                f"placeholder={inputs.nth(i).get_attribute('placeholder')} "
-                f"name={inputs.nth(i).get_attribute('name')}\n"
+                + combos.nth(i).inner_text()
+                + "\n"
             )
         except:
             pass
 
 
-    # 列出按鈕
-    buttons = page.locator("button")
+    # 找包含文字的元素
 
-    result += "\n按鈕數量：" + str(buttons.count()) + "\n\n"
+    keywords = [
+        "出發地點",
+        "目的地",
+        "出發日期",
+        "返程日期",
+        "乘客"
+    ]
 
+    result += "\n=== 關鍵文字 ===\n"
 
-    for i in range(min(buttons.count(),20)):
-        try:
-            txt = buttons.nth(i).inner_text()
-            if txt.strip():
-                result += f"{i}: {txt}\n"
-        except:
-            pass
+    for k in keywords:
+        count = page.get_by_text(k, exact=False).count()
+        result += f"{k}: {count}\n"
 
 
     send(result)
