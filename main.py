@@ -9,7 +9,7 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send(text):
     requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        f"https://api.telegram.org/bot{TOKEN}api/sendMessage",
         data={
             "chat_id": CHAT_ID,
             "text": text
@@ -32,7 +32,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
 
-    result = "=== TPE真正選取測試 ===\n\n"
+    result = "=== TPE選項定位 ===\n\n"
 
 
     try:
@@ -57,58 +57,42 @@ with sync_playwright() as p:
     page.wait_for_timeout(3000)
 
 
-    tpe = page.get_by_text(
-        "TPE",
-        exact=True
+    # 找包含 TPE 的所有 div
+    divs = page.locator("div").filter(
+        has_text="TPE"
     )
 
 
-    result += "TPE數量：" + str(tpe.count()) + "\n\n"
+    result += "包含TPE div數量："
+    result += str(divs.count())
+    result += "\n\n"
 
 
-    if tpe.count() > 0:
+    for i in range(min(divs.count(),10)):
 
-        # 往上找祖先層級
-        for level in range(1, 7):
-
-            try:
-
-                parent = tpe.locator(
-                    "xpath=" + "/.." * level
-                )
-
-                text = parent.inner_text()
-
-                result += (
-                    f"第{level}層: "
-                    + text[:100]
-                    + "\n"
-                )
-
-            except:
-                pass
-
-
-        # 嘗試點最大容器
         try:
+            txt = divs.nth(i).inner_text()
 
-            parent = tpe.locator(
-                "xpath=" + "/.." * 5
-            )
+            if "桃園" in txt:
 
-            parent.click(
-                force=True,
-                timeout=5000
-            )
+                result += "找到選項:\n"
+                result += txt[:300]
+                result += "\n\n"
 
-            page.wait_for_timeout(3000)
 
-            result += "\n已點擊第五層父元素\n"
+                divs.nth(i).click(
+                    force=True,
+                    timeout=5000
+                )
 
-        except Exception as e:
+                page.wait_for_timeout(3000)
 
-            result += "\n點擊失敗:\n"
-            result += str(e)
+                result += "已點擊此區塊\n"
+
+                break
+
+        except:
+            pass
 
 
     body = page.locator(
@@ -119,7 +103,7 @@ with sync_playwright() as p:
     if "最近到達目的地" in body:
         result += "\n選單仍存在"
     else:
-        result += "\n選單消失"
+        result += "\n選單已關閉"
 
 
     send(result)
