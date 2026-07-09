@@ -22,7 +22,7 @@ def send(text):
 
 try:
 
-    result = "=== 目的地分類測試 ===\n\n"
+    result = "=== DAD定位測試 ===\n\n"
 
 
     with sync_playwright() as p:
@@ -64,8 +64,6 @@ try:
 
 
 
-        # 點目的地
-
         page.get_by_text(
             "目的地",
             exact=True
@@ -75,17 +73,51 @@ try:
         )
 
 
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(5000)
 
 
 
-        body = page.locator(
-            "body"
-        ).inner_text()
+        dad_all = page.locator(
+            "text=DAD"
+        )
+
+
+        count = dad_all.count()
+
+
+        result += (
+            "DAD元素數量:"
+            + str(count)
+            + "\n\n"
+        )
 
 
 
-        result += body[:3000]
+        for i in range(count):
+
+            try:
+
+                txt = dad_all.nth(i).inner_text()
+
+                html = dad_all.nth(i).evaluate(
+                    "(e)=>e.outerHTML"
+                )
+
+
+                result += (
+                    "第"
+                    + str(i)
+                    + "\n"
+                    + txt
+                    + "\n"
+                    + html[:300]
+                    + "\n\n"
+                )
+
+
+            except Exception as e:
+
+                result += str(e)
 
 
 
