@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from playwright.sync_api import sync_playwright
 
 
@@ -21,7 +22,7 @@ def send(text):
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
-            "text": text
+            "text": text[:4000]
         },
         timeout=20
     )
@@ -56,10 +57,12 @@ def open_page(page):
 
     log("🌐 開啟 Vietjet")
 
+
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
     )
+
 
     page.wait_for_timeout(10000)
 
@@ -86,7 +89,7 @@ def accept_cookie(page):
 
 def select_departure(page):
 
-    log("🇹🇼 展開台灣")
+    log("🇹🇼 TPE")
 
 
     page.get_by_text(
@@ -137,7 +140,7 @@ def select_departure(page):
 
 def select_destination(page):
 
-    log("🛬 開啟目的地")
+    log("🛬 DAD")
 
 
     page.get_by_text(
@@ -164,6 +167,7 @@ def select_destination(page):
 
 
     page.wait_for_timeout(5000)
+
 
     log("✅ DAD完成")
 
@@ -202,6 +206,7 @@ def select_dates(page):
         force=True
     )
 
+
     page.wait_for_timeout(5000)
 
 
@@ -232,113 +237,130 @@ def select_dates(page):
 
 
 
-# ============================
-# 新增：React查詢追蹤
-# ============================
+# ==========================
+# API Response監控
+# ==========================
 
-def setup_network(page):
-
-    requests_log = []
+api_result = []
 
 
-    def handle(req):
+def setup_response(page):
 
-        url = req.url
+
+    def response_handler(res):
+
+        url = res.url.lower()
 
 
         if (
-            "api" in url.lower()
-            or "search" in url.lower()
-            or "flight" in url.lower()
+            "api" in url
+            or "flight" in url
+            or "search" in url
+            or "booking" in url
         ):
 
-            requests_log.append(url)
 
-            send(
-                "🌐 Request:\n"
-                + url[:300]
-            )
+            status = res.status
+
+
+            item = {
+                "status": status,
+                "url": res.url
+            }
+
+
+            try:
+
+                data = res.text()
+
+                item["body"] = data[:500]
+
+
+            except:
+
+                pass
+
+
+
+            api_result.append(item)
+
 
 
     page.on(
-        "request",
-        handle
+        "response",
+        response_handler
     )
 
 
-    return requests_log
+
+def click_search(page):
+
+    log("🔍 點查詢")
 
 
-
-def click_search_debug(page, requests_log):
-
-    log("🔍 找查詢文字")
-
-
-    target = page.get_by_text(
+    btn = page.get_by_text(
         "查詢航班",
         exact=True
     ).last
 
 
-
-    if target.count()==0:
-
-        raise Exception(
-            "找不到查詢航班"
-        )
-
-
-    html = target.evaluate(
-        "(e)=>e.outerHTML"
-    )
-
-
-    send(
-        "按鈕HTML:\n"
-        +html[:1000]
-    )
-
-
-
-    parent = target.locator(
-        "xpath=.."
-    )
-
-
-    parent_html = parent.evaluate(
-        "(e)=>e.outerHTML"
-    )
-
-
-    send(
-        "父層HTML:\n"
-        +parent_html[:1500]
-    )
-
-
-
-    log("🖱 JS click")
-
-
-    target.evaluate(
+    btn.evaluate(
         "(e)=>e.click()"
     )
 
 
-    page.wait_for_timeout(5000)
-
-
-
-    log("🖱 dispatch click")
-
-
-    target.dispatch_event(
-        "click"
+    page.wait_for_timeout(
+        30000
     )
 
 
-    page.wait_for_timeout(30000)
+    log("📡 API整理")
+
+
+
+    output = []
+
+
+    for x in api_result:
+
+
+        # 只看重要的
+
+        if (
+            x["status"] != 200
+            or
+            "flight" in x["url"].lower()
+            or
+            "search" in x["url"].lower()
+        ):
+
+
+            output.append(
+                "STATUS:\n"
+                +str(x["status"])
+                +
+                "\nURL:\n"
+                +x["url"][:300]
+                +
+                "\nBODY:\n"
+                +x.get("body","")[:500]
+            )
+
+
+
+    if len(output)==0:
+
+        send(
+            "沒有抓到搜尋API"
+        )
+
+    else:
+
+        send(
+            "\n\n==========\n\n".join(
+                output[:10]
+            )
+        )
 
 
 
@@ -348,17 +370,11 @@ def click_search_debug(page, requests_log):
     )
 
 
-    send(
-        "API數量:"
-        +str(len(requests_log))
-    )
-
-
 
 def main():
 
     send(
-        "🚀 React事件Debug開始"
+        "🚀 API Response Debug開始"
     )
 
 
@@ -377,7 +393,7 @@ def main():
 
         try:
 
-            requests_log = setup_network(page)
+            setup_response(page)
 
 
             open_page(page)
@@ -390,10 +406,7 @@ def main():
 
             select_dates(page)
 
-            click_search_debug(
-                page,
-                requests_log
-            )
+            click_search(page)
 
 
             send(
@@ -401,9 +414,7 @@ def main():
             )
 
 
-
         except Exception as e:
-
 
             send(
                 "❌錯誤\n"+str(e)
