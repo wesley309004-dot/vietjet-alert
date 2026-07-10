@@ -205,48 +205,63 @@ with sync_playwright() as p:
 
 
 
-    # 查詢
+# =====================
+# 關閉日期浮層後查詢
+# =====================
 
-    try:
+try:
 
+    # 點空白處讓日期選單收起來
+    page.mouse.click(
+        1000,
+        200
+    )
+
+    page.wait_for_timeout(
+        2000
+    )
+
+
+    search_btn = page.get_by_role(
+        "button",
+        name="查詢航班"
+    ).first
+
+
+    print(
+        "查詢按鈕數量:",
         page.get_by_role(
             "button",
             name="查詢航班"
-        ).first.click(
-            timeout=10000
-        )
-
-
-        print(
-            "查詢按鈕成功"
-        )
-
-
-    except Exception as e:
-
-        print(
-            "查詢失敗",
-            e
-        )
-
-        send(
-            f"查詢失敗\n{e}"
-        )
-
-        browser.close()
-
-        raise
-
-
-
-    page.wait_for_timeout(
-        15000
+        ).count()
     )
 
+
+    search_btn.scroll_into_view_if_needed()
+
+
+    search_btn.click(
+        timeout=10000
+    )
+
+
+    print(
+        "查詢按鈕成功"
+    )
+
+
+except Exception as e:
+
+    print(
+        "查詢失敗",
+        e
+    )
 
     send(
-        "越捷查詢完成"
+        f"查詢失敗\n{e}"
     )
 
-
     browser.close()
+
+    raise
+    
