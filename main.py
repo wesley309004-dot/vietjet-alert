@@ -32,21 +32,13 @@ def safe_click(locator, name=""):
             timeout=5000
         )
 
-        print(
-            name,
-            "click成功"
-        )
-
+        print(name, "click成功")
         return True
 
 
     except Exception as e:
 
-        print(
-            name,
-            "普通click失敗",
-            e
-        )
+        print(name, "普通失敗", e)
 
 
         try:
@@ -56,22 +48,13 @@ def safe_click(locator, name=""):
                 timeout=5000
             )
 
-            print(
-                name,
-                "force成功"
-            )
-
+            print(name, "force成功")
             return True
 
 
         except Exception as e2:
 
-            print(
-                name,
-                "失敗",
-                e2
-            )
-
+            print(name, "失敗", e2)
             return False
 
 
@@ -103,9 +86,6 @@ with sync_playwright() as p:
         )
 
 
-
-        # cookie
-
         try:
 
             page.get_by_text(
@@ -121,23 +101,15 @@ with sync_playwright() as p:
 
 
 
-        # =====================
         # 日期
-        # =====================
 
-
-        date_btn = page.get_by_text(
+        page.get_by_text(
             "出發日期",
             exact=True
         ).first.locator(
             "xpath=ancestor::div[@role='button'][1]"
-        )
+        ).click()
 
-
-        safe_click(
-            date_btn,
-            "日期"
-        )
 
 
         page.wait_for_timeout(
@@ -146,13 +118,9 @@ with sync_playwright() as p:
 
 
 
-        # =====================
-        # 切八月2026
-        # =====================
-
+        # 切到八月2026
 
         while True:
-
 
             month = page.locator(
                 ".rdrMonthAndYearPickers"
@@ -160,7 +128,7 @@ with sync_playwright() as p:
 
 
             print(
-                "目前月份:",
+                "月份:",
                 month
             )
 
@@ -181,45 +149,20 @@ with sync_playwright() as p:
 
 
 
-        print(
-            "八月到達"
-        )
-
-
-
-        # =====================
-        # 出發8/15
-        # =====================
-
+        # 出發 8/15
 
         days = page.locator(
             ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
         )
 
 
-        found = False
-
-
         for i in range(days.count()):
 
-            if days.nth(i).inner_text() == "15":
+            if days.nth(i).inner_text()=="15":
 
                 days.nth(i).click()
-
-                found = True
-
-                print(
-                    "出發8/15完成"
-                )
-
+                print("8/15完成")
                 break
-
-
-        if not found:
-
-            raise Exception(
-                "找不到8/15"
-            )
 
 
 
@@ -229,39 +172,20 @@ with sync_playwright() as p:
 
 
 
-        # =====================
-        # 回程8/22
-        # =====================
-
+        # 回程 8/22
 
         days = page.locator(
             ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
         )
 
 
-        found = False
-
-
         for i in range(days.count()):
 
-            if days.nth(i).inner_text() == "22":
+            if days.nth(i).inner_text()=="22":
 
                 days.nth(i).click()
-
-                found = True
-
-                print(
-                    "回程8/22完成"
-                )
-
+                print("8/22完成")
                 break
-
-
-        if not found:
-
-            raise Exception(
-                "找不到8/22"
-            )
 
 
 
@@ -271,10 +195,7 @@ with sync_playwright() as p:
 
 
 
-        # =====================
-        # 出發地 TPE
-        # =====================
-
+        # 出發 TPE
 
         page.locator(
             "input"
@@ -304,29 +225,38 @@ with sync_playwright() as p:
 
 
 
-        # =====================
-        # 目的地 PQC
-        # =====================
-
+        # 目的地 CTS 新千歲
 
         page.locator(
             "#arrivalPlaceDesktop"
         ).fill(
-            "PQC"
+            "CTS"
         )
 
 
         page.wait_for_timeout(
-            2000
+            3000
         )
+
+
+
+        print(
+            "CTS搜尋結果:"
+        )
+
+
+        print(
+            page.locator("body").inner_text()[:2000]
+        )
+
 
 
         safe_click(
             page.get_by_text(
-                "PQC",
+                "CTS",
                 exact=False
             ).last,
-            "PQC"
+            "CTS"
         )
 
 
@@ -338,27 +268,16 @@ with sync_playwright() as p:
 
 
         print(
-            "TPE PQC選取成功"
+            "CTS選取完成"
         )
 
 
 
-        # =====================
         # 查詢
-        # =====================
 
-
-        try:
-
-            page.keyboard.press(
-                "Escape"
-            )
-
-
-        except:
-
-            pass
-
+        page.keyboard.press(
+            "Escape"
+        )
 
 
         page.wait_for_timeout(
@@ -366,35 +285,16 @@ with sync_playwright() as p:
         )
 
 
-
-        btns = page.get_by_role(
+        btn = page.get_by_role(
             "button",
             name="查詢航班"
-        )
+        ).first
 
 
-        print(
-            "查詢按鈕數:",
-            btns.count()
-        )
-
-
-        search_btn = btns.first
-
-
-        search_btn.scroll_into_view_if_needed()
-
-
-
-        if not safe_click(
-            search_btn,
+        safe_click(
+            btn,
             "查詢航班"
-        ):
-
-            raise Exception(
-                "查詢按鈕點擊失敗"
-            )
-
+        )
 
 
         page.wait_for_timeout(
@@ -402,9 +302,8 @@ with sync_playwright() as p:
         )
 
 
-
         send(
-            "越捷查詢完成"
+            "CTS札幌新千歲測試完成"
         )
 
 
@@ -413,18 +312,17 @@ with sync_playwright() as p:
 
 
         print(
-            "程式失敗:",
+            "失敗:",
             e
         )
 
 
         send(
-            f"程式失敗\n{e}"
+            f"CTS測試失敗\n{e}"
         )
 
 
 
     finally:
-
 
         browser.close()
