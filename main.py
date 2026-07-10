@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright, TimeoutError
+from playwright.sync_api import sync_playwright
 import os
 import requests
 
@@ -35,6 +35,7 @@ with sync_playwright() as p:
 
     try:
 
+
         page.goto(
             "https://www.vietjetair.com/zh-TW",
             timeout=60000
@@ -44,8 +45,6 @@ with sync_playwright() as p:
         page.wait_for_timeout(8000)
 
 
-
-        # cookie
 
         try:
 
@@ -61,7 +60,7 @@ with sync_playwright() as p:
 
 
 
-        # 日期
+        # 開日期
 
         page.get_by_text(
             "出發日期",
@@ -71,20 +70,21 @@ with sync_playwright() as p:
         ).click()
 
 
+
         page.wait_for_timeout(2000)
 
 
 
-        # 到八月
+        # 八月
 
         while True:
 
-            month=page.locator(
+            m=page.locator(
                 ".rdrMonthAndYearPickers"
             ).first.inner_text()
 
 
-            if month=="八月 2026":
+            if m=="八月 2026":
                 break
 
 
@@ -97,16 +97,20 @@ with sync_playwright() as p:
 
 
 
-        days=page.locator(
-            ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
-        )
+        # 15
+
+        for i in range(
+            page.locator(".rdrDay:not(.rdrDayPassive)").count()
+        ):
+
+            d=page.locator(
+                ".rdrDay:not(.rdrDayPassive)"
+            ).nth(i)
 
 
-        for i in range(days.count()):
+            if d.inner_text()=="15":
 
-            if days.nth(i).inner_text()=="15":
-
-                days.nth(i).click()
+                d.click()
                 break
 
 
@@ -115,16 +119,20 @@ with sync_playwright() as p:
 
 
 
-        days=page.locator(
-            ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
-        )
+        # 22
+
+        for i in range(
+            page.locator(".rdrDay:not(.rdrDayPassive)").count()
+        ):
+
+            d=page.locator(
+                ".rdrDay:not(.rdrDayPassive)"
+            ).nth(i)
 
 
-        for i in range(days.count()):
+            if d.inner_text()=="22":
 
-            if days.nth(i).inner_text()=="22":
-
-                days.nth(i).click()
+                d.click()
                 break
 
 
@@ -133,7 +141,7 @@ with sync_playwright() as p:
 
 
 
-        # 出發 TPE
+        # TPE
 
         page.locator(
             "input"
@@ -179,62 +187,84 @@ with sync_playwright() as p:
 
 
 
-        # =====================
-        # 查詢
-        # =====================
+        # =========================
+        # 真正提交
+        # =========================
 
 
-        btn=page.get_by_role(
-            "button",
-            name="查詢航班"
-        ).first
+        buttons=page.locator(
+            "button"
+        )
 
 
-        btn.scroll_into_view_if_needed()
+        target=None
 
 
-        page.wait_for_timeout(1000)
+        for i in range(buttons.count()):
+
+            txt=buttons.nth(i).inner_text()
 
 
-        try:
+            if txt.strip()=="查詢航班":
 
-            btn.click(
-                force=True,
-                timeout=10000
+                target=buttons.nth(i)
+                break
+
+
+
+        if target:
+
+
+            target.scroll_into_view_if_needed()
+
+
+            page.wait_for_timeout(1000)
+
+
+
+            target.evaluate(
+                """
+                el=>{
+                    el.click();
+                }
+                """
             )
 
-        except:
+
+        else:
 
 
-            page.keyboard.press(
-                "Enter"
+            raise Exception(
+                "找不到查詢按鈕"
             )
 
 
 
-        # 等待跳頁
+        # 等 React routing
 
-        try:
+        page.wait_for_timeout(
+            15000
+        )
 
-            page.wait_for_url(
-                "**/select-flight**",
-                timeout=30000
-            )
+
+
+        if "/select-flight" in page.url:
 
 
             send(
-                "✅ CTS進入航班頁\n\nURL:\n"+page.url
-            )
-
-
-        except:
-
-
-            send(
-                "⚠️ 未進入航班頁\n\nURL:\n"
+                "✅ CTS進入航班頁\n\n"
                 +page.url
-                +"\n\nBODY:\n"
-                +page.locator("body").inner_text()[:3000]
+            )
+
+
+        else:
+
+
+            send(
+                "⚠️ 還在首頁\n\nURL:\n"
+                +page.url
+                +"\n\n"
+                +page.locator("body").inner_text()[:2000]
             )
 
 
