@@ -1,7 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os
 import requests
-import time
 
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -20,9 +19,7 @@ def send(msg):
     )
 
 
-
 with sync_playwright() as p:
-
 
     browser = p.chromium.launch(
         headless=True
@@ -44,7 +41,7 @@ with sync_playwright() as p:
 
 
 
-    # cookie
+    # 接受cookie
 
     try:
 
@@ -61,10 +58,7 @@ with sync_playwright() as p:
 
 
 
-    # =====================
-    # 點日期
-    # =====================
-
+    # 點出發日期
 
     page.get_by_text(
         "出發日期",
@@ -74,17 +68,13 @@ with sync_playwright() as p:
     ).click()
 
 
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(3000)
 
 
 
-    # =====================
-    # 切換到八月2026
-    # =====================
-
+    # 切到八月2026
 
     while True:
-
 
         month = page.locator(
             ".rdrMonthAndYearPickers"
@@ -107,20 +97,17 @@ with sync_playwright() as p:
         ).first.click()
 
 
-        page.wait_for_timeout(500)
+        page.wait_for_timeout(800)
 
 
 
     print(
-        "到達八月"
+        "月份完成"
     )
 
 
 
-    # =====================
-    # 選出發日期 15
-    # =====================
-
+    # 選日期 8/15
 
     days = page.locator(
         ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
@@ -129,14 +116,12 @@ with sync_playwright() as p:
 
     for i in range(days.count()):
 
-
-        if days.nth(i).inner_text()=="15":
-
+        if days.nth(i).inner_text() == "15":
 
             days.nth(i).click()
 
             print(
-                "出發 8/15"
+                "選出發 8/15"
             )
 
             break
@@ -147,10 +132,7 @@ with sync_playwright() as p:
 
 
 
-    # =====================
-    # 選回程日期 22
-    # =====================
-
+    # 選日期 8/22
 
     days = page.locator(
         ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
@@ -159,27 +141,25 @@ with sync_playwright() as p:
 
     for i in range(days.count()):
 
-
-        if days.nth(i).inner_text()=="22":
-
+        if days.nth(i).inner_text() == "22":
 
             days.nth(i).click()
 
             print(
-                "回程 8/22"
+                "選回程 8/22"
             )
 
             break
 
 
 
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(3000)
 
 
 
-    # =====================
-    # 出發地
-    # =====================
+    # ==========================
+    # DEBUG INPUT
+    # ==========================
 
 
     inputs = page.locator(
@@ -187,104 +167,54 @@ with sync_playwright() as p:
     )
 
 
-    inputs.nth(2).fill(
-        "TPE"
-    )
+    result = "=== INPUT DEBUG ===\n\n"
 
 
-    page.wait_for_timeout(2000)
-
-
-
-    # 點第一個 TPE 選項
-
-    try:
-
-        page.get_by_text(
-            "TPE",
-            exact=False
-        ).last.click(
-            timeout=5000
-        )
-
-
-        print(
-            "TPE完成"
-        )
-
-
-    except Exception as e:
-
-
-        print(
-            "TPE失敗",
-            e
-        )
+    result += f"INPUT數量:{inputs.count()}\n\n"
 
 
 
-    # =====================
-    # 目的地
-    # =====================
+    for i in range(inputs.count()):
+
+        try:
+
+            html = inputs.nth(i).evaluate(
+                "(e)=>e.outerHTML"
+            )
 
 
-    page.locator(
-        "#arrivalPlaceDesktop"
-    ).fill(
-        "PQC"
-    )
+            value = inputs.nth(i).input_value()
 
 
-    page.wait_for_timeout(2000)
+            result += f"""
+INPUT {i}
+
+VALUE:
+{value}
+
+HTML:
+{html}
+
+----------------
+
+"""
 
 
+        except Exception as e:
 
-    try:
+            result += f"""
+INPUT {i}
 
-        page.get_by_text(
-            "PQC",
-            exact=False
-        ).last.click(
-            timeout=5000
-        )
+ERROR:
+{e}
 
+----------------
 
-        print(
-            "PQC完成"
-        )
-
-
-    except Exception as e:
-
-
-        print(
-            "PQC失敗",
-            e
-        )
-
-
-
-    # =====================
-    # 查詢航班
-    # =====================
-
-
-    page.get_by_text(
-        "查詢航班",
-        exact=True
-    ).click()
+"""
 
 
 
-    page.wait_for_timeout(
-        10000
-    )
-
-
-
-    send(
-        "越捷查詢完成"
-    )
+    send(result)
 
 
 
