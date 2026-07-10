@@ -9,26 +9,50 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send(msg):
 
-    requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        data={
-            "chat_id": CHAT_ID,
-            "text": msg[:4000]
-        },
-        timeout=20
-    )
+    try:
+
+        requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            data={
+                "chat_id": CHAT_ID,
+                "text": msg[:4000]
+            },
+            timeout=20
+        )
+
+    except Exception as e:
+
+        print(
+            "Telegram錯誤:",
+            e
+        )
+
 
 
 def safe_click(locator, name=""):
 
     try:
-        locator.click(timeout=5000)
-        print(name, "成功")
+
+        locator.click(
+            timeout=5000
+        )
+
+        print(
+            name,
+            "click成功"
+        )
+
         return True
+
 
     except Exception as e:
 
-        print(name, "普通失敗", e)
+        print(
+            name,
+            "普通click失敗:",
+            e
+        )
+
 
         try:
 
@@ -37,12 +61,22 @@ def safe_click(locator, name=""):
                 timeout=5000
             )
 
-            print(name, "force成功")
+            print(
+                name,
+                "force成功"
+            )
+
             return True
+
 
         except Exception as e2:
 
-            print(name, "失敗", e2)
+            print(
+                name,
+                "失敗:",
+                e2
+            )
+
             return False
 
 
@@ -74,6 +108,7 @@ with sync_playwright() as p:
         )
 
 
+
         try:
 
             page.get_by_text(
@@ -89,7 +124,10 @@ with sync_playwright() as p:
 
 
 
+        # =====================
         # 日期
+        # =====================
+
 
         page.get_by_text(
             "出發日期",
@@ -114,12 +152,13 @@ with sync_playwright() as p:
 
 
             print(
-                "目前:",
+                "月份:",
                 month
             )
 
 
             if month == "八月 2026":
+
                 break
 
 
@@ -134,8 +173,6 @@ with sync_playwright() as p:
 
 
 
-        # 去程 15
-
         days = page.locator(
             ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
         )
@@ -146,7 +183,11 @@ with sync_playwright() as p:
             if days.nth(i).inner_text()=="15":
 
                 days.nth(i).click()
-                print("去程完成")
+
+                print(
+                    "去程完成"
+                )
+
                 break
 
 
@@ -156,8 +197,6 @@ with sync_playwright() as p:
         )
 
 
-
-        # 回程22
 
         days = page.locator(
             ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
@@ -169,7 +208,11 @@ with sync_playwright() as p:
             if days.nth(i).inner_text()=="22":
 
                 days.nth(i).click()
-                print("回程完成")
+
+                print(
+                    "回程完成"
+                )
+
                 break
 
 
@@ -180,7 +223,10 @@ with sync_playwright() as p:
 
 
 
+        # =====================
         # TPE
+        # =====================
+
 
         page.locator(
             "input"
@@ -203,14 +249,16 @@ with sync_playwright() as p:
         )
 
 
-
         page.wait_for_timeout(
             1000
         )
 
 
 
+        # =====================
         # CTS
+        # =====================
+
 
         page.locator(
             "#arrivalPlaceDesktop"
@@ -244,7 +292,10 @@ with sync_playwright() as p:
 
 
 
-        # 查詢
+        # =====================
+        # 查詢 (React JS click)
+        # =====================
+
 
         page.keyboard.press(
             "Escape"
@@ -256,36 +307,61 @@ with sync_playwright() as p:
         )
 
 
-        btn = page.get_by_role(
-            "button",
-            name="查詢航班"
-        ).first
 
-
-        safe_click(
-            btn,
-            "查詢"
+        print(
+            "準備查詢"
         )
+
+
+
+        result = page.evaluate(
+            """
+            () => {
+
+                const buttons =
+                [...document.querySelectorAll("button")];
+
+
+                const btn =
+                buttons.find(
+                    b =>
+                    b.innerText.includes("查詢航班")
+                );
+
+
+                if(btn){
+
+                    btn.click();
+
+                    return "clicked";
+
+                }
+
+
+                return "not found";
+
+            }
+            """
+        )
+
 
 
         print(
-            "等待結果頁"
+            "JS結果:",
+            result
         )
+
 
 
         page.wait_for_timeout(
-            15000
+            20000
         )
 
 
 
-        # 抓結果
-
         title = page.title()
 
-
         url = page.url
-
 
         body = page.locator(
             "body"
@@ -293,7 +369,8 @@ with sync_playwright() as p:
 
 
 
-        result = f"""
+        send(
+            f"""
 越捷CTS查詢測試
 
 TITLE:
@@ -304,29 +381,28 @@ URL:
 
 
 BODY:
-{body[:2500]}
+{body[:3000]}
 """
-
-
-        send(
-            result
         )
+
 
 
     except Exception as e:
 
 
         print(
-            "錯誤:",
+            "失敗:",
             e
         )
 
 
         send(
-            f"CTS查詢失敗\n{e}"
+            f"CTS測試失敗\n{e}"
         )
 
 
+
     finally:
+
 
         browser.close()
