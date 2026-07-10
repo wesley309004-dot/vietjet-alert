@@ -1,11 +1,11 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError
 import os
 import requests
 import traceback
 
 
-TOKEN=os.environ["TELEGRAM_TOKEN"]
-CHAT_ID=os.environ["TELEGRAM_CHAT_ID"]
+TOKEN = os.environ["TELEGRAM_TOKEN"]
+CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 
 def send(msg):
@@ -13,8 +13,8 @@ def send(msg):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
-            "chat_id":CHAT_ID,
-            "text":msg[:4000]
+            "chat_id": CHAT_ID,
+            "text": msg[:4000]
         },
         timeout=20
     )
@@ -24,12 +24,12 @@ def send(msg):
 with sync_playwright() as p:
 
 
-    browser=p.chromium.launch(
+    browser = p.chromium.launch(
         headless=True
     )
 
 
-    page=browser.new_page(
+    page = browser.new_page(
         locale="zh-TW"
     )
 
@@ -43,9 +43,13 @@ with sync_playwright() as p:
         )
 
 
-        page.wait_for_timeout(8000)
+        page.wait_for_timeout(
+            8000
+        )
 
 
+
+        # Cookie
 
         try:
 
@@ -62,7 +66,10 @@ with sync_playwright() as p:
 
 
 
-        # 開日期
+        # =====================
+        # 日期
+        # =====================
+
 
         page.get_by_text(
             "出發日期",
@@ -73,81 +80,112 @@ with sync_playwright() as p:
 
 
 
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(
+            2000
+        )
 
 
+
+        # 切換八月2026
 
         while True:
 
-            m=page.locator(
+            month = page.locator(
                 ".rdrMonthAndYearPickers"
             ).first.inner_text()
 
 
-            if m=="八月 2026":
+            print(
+                "目前月份:",
+                month
+            )
+
+
+            if month == "八月 2026":
 
                 break
+
 
 
             page.locator(
                 "button.rdrNextButton"
-            ).first.click(
-                force=True
+            ).first.evaluate(
+                """
+                el=>{
+                    el.click();
+                }
+                """
             )
 
-            page.wait_for_timeout(500)
+
+            page.wait_for_timeout(
+                800
+            )
 
 
 
-        # 15
+        # 出發 15
 
-        for i in range(
-            page.locator(
-                ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
-            ).count()
-        ):
-
-            d=page.locator(
-                ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
-            ).nth(i)
+        days = page.locator(
+            ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
+        )
 
 
-            if d.inner_text()=="15":
+        for i in range(days.count()):
 
-                d.click(force=True)
+            if days.nth(i).inner_text()=="15":
+
+                days.nth(i).evaluate(
+                    """
+                    el=>{
+                        el.click();
+                    }
+                    """
+                )
+
                 break
 
 
 
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(
+            1500
+        )
 
 
 
-        # 22
+        # 回程22
 
-        for i in range(
-            page.locator(
-                ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
-            ).count()
-        ):
-
-            d=page.locator(
-                ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
-            ).nth(i)
+        days = page.locator(
+            ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
+        )
 
 
-            if d.inner_text()=="22":
+        for i in range(days.count()):
 
-                d.click(force=True)
+            if days.nth(i).inner_text()=="22":
+
+                days.nth(i).evaluate(
+                    """
+                    el=>{
+                        el.click();
+                    }
+                    """
+                )
+
                 break
 
 
 
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(
+            2000
+        )
 
 
 
+        # =====================
         # TPE
+        # =====================
+
 
         page.locator(
             "input"
@@ -156,23 +194,33 @@ with sync_playwright() as p:
         )
 
 
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(
+            2000
+        )
 
 
         page.get_by_text(
             "TPE",
             exact=False
-        ).last.click(
-            force=True
+        ).last.evaluate(
+            """
+            el=>{
+                el.click();
+            }
+            """
+        )
+
+
+        page.wait_for_timeout(
+            2000
         )
 
 
 
-        page.wait_for_timeout(1500)
-
-
-
+        # =====================
         # CTS
+        # =====================
+
 
         page.locator(
             "#arrivalPlaceDesktop"
@@ -181,28 +229,35 @@ with sync_playwright() as p:
         )
 
 
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(
+            2000
+        )
 
 
         page.get_by_text(
             "CTS",
             exact=False
-        ).last.click(
-            force=True
+        ).last.evaluate(
+            """
+            el=>{
+                el.click();
+            }
+            """
+        )
+
+
+        page.wait_for_timeout(
+            3000
         )
 
 
 
-        page.wait_for_timeout(3000)
-
-
-
         # =====================
-        # React 真正提交
+        # 查詢
         # =====================
 
 
-        btn=page.get_by_role(
+        btn = page.get_by_role(
             "button",
             name="查詢航班"
         ).first
@@ -218,15 +273,54 @@ with sync_playwright() as p:
         )
 
 
-
         print(
-            "已觸發React click"
+            "第一次查詢"
         )
 
 
 
-        page.wait_for_timeout(
-            15000
+        # 等跳轉
+
+        try:
+
+            page.wait_for_url(
+                "**/select-flight**",
+                timeout=30000
+            )
+
+
+        except:
+
+
+            print(
+                "第一次沒有跳轉，再試一次"
+            )
+
+
+            page.wait_for_timeout(
+                3000
+            )
+
+
+            btn.evaluate(
+                """
+                el=>{
+                    el.click();
+                }
+                """
+            )
+
+
+            page.wait_for_url(
+                "**/select-flight**",
+                timeout=30000
+            )
+
+
+
+        page.wait_for_load_state(
+            "networkidle",
+            timeout=30000
         )
 
 
@@ -234,9 +328,19 @@ with sync_playwright() as p:
         if "select-flight" in page.url:
 
 
+            body = page.locator(
+                "body"
+            ).inner_text()
+
+
+
             send(
-                "✅ CTS成功\n\n"
+                "✅ CTS航班頁成功\n\n"
+                "URL:\n"
                 +page.url
+                +
+                "\n\nBODY:\n"
+                +body[:2500]
             )
 
 
@@ -244,7 +348,7 @@ with sync_playwright() as p:
 
 
             send(
-                "⚠️ 仍在首頁\n\n"
+                "⚠️ 未進入航班頁\n\n"
                 +page.url
             )
 
@@ -253,14 +357,31 @@ with sync_playwright() as p:
     except Exception as e:
 
 
+        try:
+
+            page.screenshot(
+                path="error.png",
+                full_page=True
+            )
+
+        except:
+
+            pass
+
+
+
         send(
-            "❌ ERROR\n\n"
+            "❌ 查詢異常\n\n"
             +str(e)
-            +"\n\n"
-            +traceback.format_exc()[-1500:]
+            +
+            "\n\n"
+            +
+            traceback.format_exc()[-2000:]
         )
 
 
+
     finally:
+
 
         browser.close()
