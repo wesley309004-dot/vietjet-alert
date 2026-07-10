@@ -1,11 +1,10 @@
 from playwright.sync_api import sync_playwright, TimeoutError
 import os
 import requests
-import time
 
 
-TOKEN = os.environ["TELEGRAM_TOKEN"]
-CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+TOKEN=os.environ["TELEGRAM_TOKEN"]
+CHAT_ID=os.environ["TELEGRAM_CHAT_ID"]
 
 
 def send(msg):
@@ -13,39 +12,23 @@ def send(msg):
     requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         data={
-            "chat_id": CHAT_ID,
-            "text": msg[:4000]
+            "chat_id":CHAT_ID,
+            "text":msg[:4000]
         },
         timeout=20
     )
 
 
 
-def click_text(page, text):
-
-    try:
-        page.get_by_text(
-            text,
-            exact=True
-        ).first.click(
-            timeout=5000
-        )
-        return True
-
-    except:
-        return False
-
-
-
 with sync_playwright() as p:
 
 
-    browser = p.chromium.launch(
+    browser=p.chromium.launch(
         headless=True
     )
 
 
-    page = browser.new_page(
+    page=browser.new_page(
         locale="zh-TW"
     )
 
@@ -64,10 +47,17 @@ with sync_playwright() as p:
 
         # cookie
 
-        click_text(
-            page,
-            "接受"
-        )
+        try:
+
+            page.get_by_text(
+                "接受",
+                exact=True
+            ).click(
+                timeout=3000
+            )
+
+        except:
+            pass
 
 
 
@@ -85,16 +75,16 @@ with sync_playwright() as p:
 
 
 
-        # 月份切換
+        # 到八月
 
         while True:
 
-            month = page.locator(
+            month=page.locator(
                 ".rdrMonthAndYearPickers"
             ).first.inner_text()
 
 
-            if month == "八月 2026":
+            if month=="八月 2026":
                 break
 
 
@@ -103,15 +93,11 @@ with sync_playwright() as p:
             ).first.click()
 
 
-            page.wait_for_timeout(
-                500
-            )
+            page.wait_for_timeout(500)
 
 
 
-        # 8/15
-
-        days = page.locator(
+        days=page.locator(
             ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
         )
 
@@ -129,9 +115,7 @@ with sync_playwright() as p:
 
 
 
-        # 8/22
-
-        days = page.locator(
+        days=page.locator(
             ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
         )
 
@@ -145,39 +129,30 @@ with sync_playwright() as p:
 
 
 
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(1000)
 
 
 
-        # TPE
+        # 出發 TPE
 
-        inputs = page.locator(
+        page.locator(
             "input"
-        )
-
-
-        inputs.nth(2).fill(
+        ).nth(2).fill(
             "TPE"
         )
 
 
-        page.wait_for_timeout(
-            2000
-        )
+        page.wait_for_timeout(2000)
 
 
         page.get_by_text(
             "TPE",
             exact=False
-        ).last.click(
-            timeout=5000
-        )
+        ).last.click()
 
 
 
-        page.wait_for_timeout(
-            2000
-        )
+        page.wait_for_timeout(1000)
 
 
 
@@ -190,38 +165,50 @@ with sync_playwright() as p:
         )
 
 
-        page.wait_for_timeout(
-            2000
-        )
+        page.wait_for_timeout(2000)
 
 
         page.get_by_text(
             "CTS",
             exact=False
-        ).last.click(
-            timeout=5000
-        )
-
-
-        page.wait_for_timeout(
-            3000
-        )
+        ).last.click()
 
 
 
-        before = page.url
+        page.wait_for_timeout(2000)
 
 
 
+        # =====================
         # 查詢
+        # =====================
 
-        page.get_by_role(
+
+        btn=page.get_by_role(
             "button",
             name="查詢航班"
-        ).first.click(
-            force=True,
-            timeout=10000
-        )
+        ).first
+
+
+        btn.scroll_into_view_if_needed()
+
+
+        page.wait_for_timeout(1000)
+
+
+        try:
+
+            btn.click(
+                force=True,
+                timeout=10000
+            )
+
+        except:
+
+
+            page.keyboard.press(
+                "Enter"
+            )
 
 
 
@@ -234,47 +221,20 @@ with sync_playwright() as p:
                 timeout=30000
             )
 
-        except:
-
-            pass
-
-
-
-        page.wait_for_timeout(
-            10000
-        )
-
-
-
-        url = page.url
-
-
-
-        if "select-flight" in url:
-
 
             send(
-                "✅ 越捷 CTS 成功進入航班頁\n\n"
-                + url
+                "✅ CTS進入航班頁\n\nURL:\n"+page.url
             )
 
 
-        else:
-
-
-            body = page.locator(
-                "body"
-            ).inner_text()
+        except:
 
 
             send(
-                "⚠️ 未進入航班頁\n\n"
-                "URL:\n"
-                + url
-                +
-                "\n\nBODY:\n"
-                +
-                body[:1000]
+                "⚠️ 未進入航班頁\n\nURL:\n"
+                +page.url
+                +"\n\nBODY:\n"
+                +page.locator("body").inner_text()[:3000]
             )
 
 
@@ -282,28 +242,9 @@ with sync_playwright() as p:
     except Exception as e:
 
 
-        try:
-
-            body = page.locator(
-                "body"
-            ).inner_text()
-
-        except:
-
-            body=""
-
-
         send(
             "❌ ERROR\n\n"
-            + str(e)
-            +
-            "\n\nURL:\n"
-            +
-            page.url
-            +
-            "\n\n"
-            +
-            body[:1000]
+            +str(e)
         )
 
 
