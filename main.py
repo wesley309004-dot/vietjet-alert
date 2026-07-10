@@ -19,7 +19,9 @@ def send(msg):
     )
 
 
+
 with sync_playwright() as p:
+
 
     browser = p.chromium.launch(
         headless=True
@@ -41,8 +43,6 @@ with sync_playwright() as p:
 
 
 
-    # 接受cookie
-
     try:
 
         page.get_by_text(
@@ -58,7 +58,10 @@ with sync_playwright() as p:
 
 
 
-    # 點出發日期
+    # =====================
+    # 日期
+    # =====================
+
 
     page.get_by_text(
         "出發日期",
@@ -72,8 +75,6 @@ with sync_playwright() as p:
 
 
 
-    # 切到八月2026
-
     while True:
 
         month = page.locator(
@@ -81,10 +82,7 @@ with sync_playwright() as p:
         ).first.inner_text()
 
 
-        print(
-            "目前月份:",
-            month
-        )
+        print(month)
 
 
         if month == "八月 2026":
@@ -97,17 +95,9 @@ with sync_playwright() as p:
         ).first.click()
 
 
-        page.wait_for_timeout(800)
+        page.wait_for_timeout(500)
 
 
-
-    print(
-        "月份完成"
-    )
-
-
-
-    # 選日期 8/15
 
     days = page.locator(
         ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
@@ -116,13 +106,9 @@ with sync_playwright() as p:
 
     for i in range(days.count()):
 
-        if days.nth(i).inner_text() == "15":
+        if days.nth(i).inner_text()=="15":
 
             days.nth(i).click()
-
-            print(
-                "選出發 8/15"
-            )
 
             break
 
@@ -132,8 +118,6 @@ with sync_playwright() as p:
 
 
 
-    # 選日期 8/22
-
     days = page.locator(
         ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
     )
@@ -141,81 +125,164 @@ with sync_playwright() as p:
 
     for i in range(days.count()):
 
-        if days.nth(i).inner_text() == "22":
+        if days.nth(i).inner_text()=="22":
 
             days.nth(i).click()
 
-            print(
-                "選回程 8/22"
-            )
-
             break
 
+
+
+    page.wait_for_timeout(2000)
+
+
+
+    # =====================
+    # 出發地 TPE
+    # =====================
+
+
+    inputs = page.locator(
+        "input[type='text']"
+    )
+
+
+    depart = inputs.filter(
+        has_not=page.locator("[readonly]")
+    ).first
+
+
+
+    depart.fill(
+        "TPE"
+    )
 
 
     page.wait_for_timeout(3000)
 
 
 
-    # ==========================
-    # DEBUG INPUT
-    # ==========================
+    text = page.locator(
+        "body"
+    ).inner_text()
 
 
-    inputs = page.locator(
-        "input"
+
+    send(
+        "輸入TPE後畫面:\n\n"+text[:3000]
     )
 
 
-    result = "=== INPUT DEBUG ===\n\n"
+
+    # 嘗試點選 TPE
 
 
-    result += f"INPUT數量:{inputs.count()}\n\n"
+    try:
+
+        page.get_by_text(
+            "TPE",
+            exact=False
+        ).last.click(
+            timeout=5000
+        )
 
 
-
-    for i in range(inputs.count()):
-
-        try:
-
-            html = inputs.nth(i).evaluate(
-                "(e)=>e.outerHTML"
-            )
+        print(
+            "TPE完成"
+        )
 
 
-            value = inputs.nth(i).input_value()
+    except Exception as e:
 
 
-            result += f"""
-INPUT {i}
-
-VALUE:
-{value}
-
-HTML:
-{html}
-
-----------------
-
-"""
-
-
-        except Exception as e:
-
-            result += f"""
-INPUT {i}
-
-ERROR:
-{e}
-
-----------------
-
-"""
+        send(
+            "TPE點擊失敗\n"+str(e)
+        )
 
 
 
-    send(result)
+    page.wait_for_timeout(2000)
 
+
+
+    # =====================
+    # 目的地 PQC
+    # =====================
+
+
+    arrival = page.locator(
+        "#arrivalPlaceDesktop"
+    )
+
+
+    arrival.fill(
+        "PQC"
+    )
+
+
+    page.wait_for_timeout(3000)
+
+
+
+    try:
+
+
+        page.get_by_text(
+            "PQC",
+            exact=False
+        ).last.click(
+            timeout=5000
+        )
+
+
+        print(
+            "PQC完成"
+        )
+
+
+    except Exception as e:
+
+
+        send(
+            "PQC點擊失敗\n"+str(e)
+        )
+
+
+
+    page.wait_for_timeout(2000)
+
+
+
+    # =====================
+    # 查詢
+    # =====================
+
+
+    try:
+
+        page.get_by_text(
+            "查詢航班",
+            exact=True
+        ).click(
+            timeout=5000
+        )
+
+
+        send(
+            "已送出查詢"
+        )
+
+
+    except Exception as e:
+
+
+        send(
+            "查詢失敗\n"+str(e)
+        )
+
+
+
+    page.wait_for_timeout(10000)
 
 
     browser.close()
