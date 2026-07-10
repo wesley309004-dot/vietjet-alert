@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 import os
 import requests
+from datetime import datetime
 
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -9,75 +10,25 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send(msg):
 
-    try:
-
-        requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={
-                "chat_id": CHAT_ID,
-                "text": msg[:4000]
-            },
-            timeout=20
-        )
-
-    except Exception as e:
-
-        print(
-            "Telegram錯誤:",
-            e
-        )
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": msg[:4000]
+        },
+        timeout=20
+    )
 
 
 
-def safe_click(locator, name=""):
+# ==========================
+# 設定搜尋日期
+# ==========================
 
-    try:
+DEPART_DATE = "15"
+RETURN_DATE = "22"
 
-        locator.click(
-            timeout=5000
-        )
-
-        print(
-            name,
-            "click成功"
-        )
-
-        return True
-
-
-    except Exception as e:
-
-        print(
-            name,
-            "普通click失敗:",
-            e
-        )
-
-
-        try:
-
-            locator.click(
-                force=True,
-                timeout=5000
-            )
-
-            print(
-                name,
-                "force成功"
-            )
-
-            return True
-
-
-        except Exception as e2:
-
-            print(
-                name,
-                "失敗:",
-                e2
-            )
-
-            return False
+TARGET_MONTH = "八月 2026"
 
 
 
@@ -103,11 +54,11 @@ with sync_playwright() as p:
         )
 
 
-        page.wait_for_timeout(
-            8000
-        )
+        page.wait_for_timeout(8000)
 
 
+
+        # cookie
 
         try:
 
@@ -124,9 +75,9 @@ with sync_playwright() as p:
 
 
 
-        # =====================
-        # 日期
-        # =====================
+        # ==========================
+        # 點日期
+        # ==========================
 
 
         page.get_by_text(
@@ -137,10 +88,13 @@ with sync_playwright() as p:
         ).click()
 
 
-        page.wait_for_timeout(
-            2000
-        )
+        page.wait_for_timeout(2000)
 
+
+
+        # ==========================
+        # 月份切換
+        # ==========================
 
 
         while True:
@@ -157,7 +111,7 @@ with sync_playwright() as p:
             )
 
 
-            if month == "八月 2026":
+            if month == TARGET_MONTH:
 
                 break
 
@@ -167,35 +121,56 @@ with sync_playwright() as p:
             ).first.click()
 
 
-            page.wait_for_timeout(
-                500
+            page.wait_for_timeout(500)
+
+
+
+        # ==========================
+        # 出發日
+        # ==========================
+
+
+        days = page.locator(
+            ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
+        )
+
+
+        clicked = False
+
+
+        for i in range(days.count()):
+
+
+            if days.nth(i).inner_text() == DEPART_DATE:
+
+
+                days.nth(i).click()
+
+                clicked=True
+
+                print(
+                    "出發日期完成"
+                )
+
+                break
+
+
+
+        if not clicked:
+
+            raise Exception(
+                "找不到出發日期"
             )
 
 
 
-        days = page.locator(
-            ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
-        )
-
-
-        for i in range(days.count()):
-
-            if days.nth(i).inner_text()=="15":
-
-                days.nth(i).click()
-
-                print(
-                    "去程完成"
-                )
-
-                break
+        page.wait_for_timeout(1000)
 
 
 
-        page.wait_for_timeout(
-            1000
-        )
-
+        # ==========================
+        # 回程日
+        # ==========================
 
 
         days = page.locator(
@@ -203,61 +178,75 @@ with sync_playwright() as p:
         )
 
 
+        clicked=False
+
+
         for i in range(days.count()):
 
-            if days.nth(i).inner_text()=="22":
+
+            if days.nth(i).inner_text()==RETURN_DATE:
+
 
                 days.nth(i).click()
 
+                clicked=True
+
                 print(
-                    "回程完成"
+                    "回程日期完成"
                 )
 
                 break
 
 
 
-        page.wait_for_timeout(
-            2000
-        )
+        if not clicked:
+
+            raise Exception(
+                "找不到回程日期"
+            )
 
 
 
-        # =====================
-        # TPE
-        # =====================
+        page.wait_for_timeout(1500)
 
 
-        page.locator(
+
+        # ==========================
+        # 出發地 TPE
+        # ==========================
+
+
+        inputs = page.locator(
             "input"
-        ).nth(2).fill(
+        )
+
+
+        inputs.nth(2).fill(
             "TPE"
         )
 
 
-        page.wait_for_timeout(
-            2000
+        page.wait_for_timeout(2000)
+
+
+
+        page.get_by_text(
+            "TPE",
+            exact=False
+        ).last.click(
+            timeout=5000
         )
 
 
-        safe_click(
-            page.get_by_text(
-                "TPE",
-                exact=False
-            ).last,
-            "TPE"
-        )
-
-
-        page.wait_for_timeout(
-            1000
+        print(
+            "TPE完成"
         )
 
 
 
-        # =====================
+        # ==========================
         # CTS
-        # =====================
+        # ==========================
 
 
         page.locator(
@@ -267,22 +256,15 @@ with sync_playwright() as p:
         )
 
 
-        page.wait_for_timeout(
-            3000
-        )
+        page.wait_for_timeout(2000)
 
 
-        safe_click(
-            page.get_by_text(
-                "CTS",
-                exact=False
-            ).last,
-            "CTS"
-        )
 
-
-        page.wait_for_timeout(
-            3000
+        page.get_by_text(
+            "CTS",
+            exact=False
+        ).last.click(
+            timeout=5000
         )
 
 
@@ -292,74 +274,38 @@ with sync_playwright() as p:
 
 
 
-        # =====================
-        # 查詢 (React JS click)
-        # =====================
+        page.wait_for_timeout(2000)
 
 
-        page.keyboard.press(
-            "Escape"
+
+        # ==========================
+        # 查詢按鈕
+        # ==========================
+
+
+        btn = page.get_by_role(
+            "button",
+            name="查詢航班"
+        ).first
+
+
+
+        btn.click(
+            force=True
         )
-
-
-        page.wait_for_timeout(
-            2000
-        )
-
 
 
         print(
-            "準備查詢"
-        )
-
-
-
-        result = page.evaluate(
-            """
-            () => {
-
-                const buttons =
-                [...document.querySelectorAll("button")];
-
-
-                const btn =
-                buttons.find(
-                    b =>
-                    b.innerText.includes("查詢航班")
-                );
-
-
-                if(btn){
-
-                    btn.click();
-
-                    return "clicked";
-
-                }
-
-
-                return "not found";
-
-            }
-            """
-        )
-
-
-
-        print(
-            "JS結果:",
-            result
+            "送出查詢"
         )
 
 
 
         page.wait_for_timeout(
-            20000
+            15000
         )
 
 
-
-        title = page.title()
 
         url = page.url
 
@@ -369,37 +315,67 @@ with sync_playwright() as p:
 
 
 
-        send(
-            f"""
-越捷CTS查詢測試
+        # ==========================
+        # 判斷
+        # ==========================
 
-TITLE:
-{title}
+
+        if "/select-flight" in url:
+
+
+            if "找不到適合您選擇的航班" in body:
+
+
+                msg=f"""
+❌ 越捷 CTS 無航班
+
+TPE → CTS
+
+日期:
+{DEPART_DATE}/{TARGET_MONTH}
 
 URL:
 {url}
-
-
-BODY:
-{body[:3000]}
 """
-        )
+
+
+            else:
+
+
+                msg=f"""
+🎉 越捷 CTS 發現航班！
+
+TPE → CTS
+
+日期:
+{DEPART_DATE}/{TARGET_MONTH}
+
+URL:
+{url}
+"""
+
+
+
+        else:
+
+
+            msg="""
+⚠️ 查詢異常
+未進入航班頁
+"""
+
+
+        send(msg)
 
 
 
     except Exception as e:
 
 
-        print(
-            "失敗:",
-            e
-        )
-
-
         send(
-            f"CTS測試失敗\n{e}"
+            "❌ 執行錯誤\n\n"
+            + str(e)
         )
-
 
 
     finally:
