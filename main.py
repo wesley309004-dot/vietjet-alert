@@ -19,13 +19,10 @@ def send(msg):
     )
 
 
-
 with sync_playwright() as p:
 
 
-    browser = p.chromium.launch(
-        headless=True
-    )
+    browser = p.chromium.launch(headless=True)
 
 
     page = browser.new_page(
@@ -48,9 +45,7 @@ with sync_playwright() as p:
         page.get_by_text(
             "接受",
             exact=True
-        ).click(
-            timeout=3000
-        )
+        ).click(timeout=3000)
 
     except:
 
@@ -58,10 +53,7 @@ with sync_playwright() as p:
 
 
 
-    # =====================
     # 日期
-    # =====================
-
 
     page.get_by_text(
         "出發日期",
@@ -71,7 +63,7 @@ with sync_playwright() as p:
     ).click()
 
 
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(2000)
 
 
 
@@ -80,9 +72,6 @@ with sync_playwright() as p:
         month = page.locator(
             ".rdrMonthAndYearPickers"
         ).first.inner_text()
-
-
-        print(month)
 
 
         if month == "八月 2026":
@@ -109,7 +98,6 @@ with sync_playwright() as p:
         if days.nth(i).inner_text()=="15":
 
             days.nth(i).click()
-
             break
 
 
@@ -128,7 +116,6 @@ with sync_playwright() as p:
         if days.nth(i).inner_text()=="22":
 
             days.nth(i).click()
-
             break
 
 
@@ -138,19 +125,16 @@ with sync_playwright() as p:
 
 
     # =====================
-    # 出發地 TPE
+    # 出發地
     # =====================
 
 
-    inputs = page.locator(
+    text_inputs = page.locator(
         "input[type='text']"
     )
 
 
-    depart = inputs.filter(
-        has_not=page.locator("[readonly]")
-    ).first
-
+    depart = text_inputs.nth(0)
 
 
     depart.fill(
@@ -162,33 +146,22 @@ with sync_playwright() as p:
 
 
 
-    text = page.locator(
-        "body"
-    ).inner_text()
-
-
-
-    send(
-        "輸入TPE後畫面:\n\n"+text[:3000]
-    )
-
-
-
-    # 嘗試點選 TPE
-
+    # 點桃園選項
 
     try:
 
-        page.get_by_text(
-            "TPE",
-            exact=False
-        ).last.click(
+        option = page.locator(
+            "text=桃園國際機場"
+        ).last
+
+
+        option.click(
             timeout=5000
         )
 
 
-        print(
-            "TPE完成"
+        send(
+            "TPE選取成功"
         )
 
 
@@ -196,7 +169,7 @@ with sync_playwright() as p:
 
 
         send(
-            "TPE點擊失敗\n"+str(e)
+            "TPE選取失敗\n"+str(e)
         )
 
 
@@ -206,7 +179,7 @@ with sync_playwright() as p:
 
 
     # =====================
-    # 目的地 PQC
+    # 目的地
     # =====================
 
 
@@ -226,17 +199,18 @@ with sync_playwright() as p:
 
     try:
 
+        option = page.locator(
+            "text=富國"
+        ).last
 
-        page.get_by_text(
-            "PQC",
-            exact=False
-        ).last.click(
+
+        option.click(
             timeout=5000
         )
 
 
-        print(
-            "PQC完成"
+        send(
+            "PQC選取成功"
         )
 
 
@@ -244,7 +218,7 @@ with sync_playwright() as p:
 
 
         send(
-            "PQC點擊失敗\n"+str(e)
+            "PQC選取失敗\n"+str(e)
         )
 
 
@@ -253,10 +227,7 @@ with sync_playwright() as p:
 
 
 
-    # =====================
     # 查詢
-    # =====================
-
 
     try:
 
@@ -269,7 +240,7 @@ with sync_playwright() as p:
 
 
         send(
-            "已送出查詢"
+            "查詢已送出"
         )
 
 
