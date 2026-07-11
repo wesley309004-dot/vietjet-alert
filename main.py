@@ -22,11 +22,11 @@ def send(msg):
         )
 
     except Exception as e:
-        print("Telegram error:", e)
+        print(e)
 
 
 
-def debug(msg):
+def log(msg):
 
     print(
         datetime.datetime.now(),
@@ -35,61 +35,119 @@ def debug(msg):
 
 
 
-def wait(page, sec=1):
+def wait(page, sec):
 
-    page.wait_for_timeout(
-        sec * 1000
+    page.wait_for_timeout(sec*1000)
+
+
+
+def click_search(page):
+
+    log("點查詢航班")
+
+
+    button = page.locator(
+        "button.MuiButton-contained"
+    ).filter(
+        has_text="查詢航班"
+    ).first
+
+
+    button.click(
+        force=True,
+        timeout=15000
     )
 
 
 
-def open_vietjet(page):
-
-    debug("開啟越捷")
-
-    page.goto(
-        "https://www.vietjetair.com/zh-TW",
-        timeout=60000
-    )
-
-    wait(page,8)
+def select_airport(page, code, arrival=False):
 
 
-    try:
+    if arrival:
 
-        page.get_by_text(
-            "接受",
-            exact=True
-        ).click(
-            timeout=3000
+        box = page.locator(
+            "#arrivalPlaceDesktop"
         )
 
-        debug("Cookie完成")
+    else:
+
+        # 沒有id，用label找下面input
+
+        box = page.locator(
+            "label",
+            has_text="出發地點"
+        ).locator(
+            ".."
+        ).locator(
+            "input"
+        )
 
 
-    except:
 
-        debug("沒有Cookie")
+    log(
+        f"輸入 {code}"
+    )
+
+
+    box.click(
+        force=True
+    )
+
+
+    box.fill(
+        code
+    )
+
+
+    wait(
+        page,
+        3
+    )
+
+
+    # 點選項
+
+    option = page.get_by_text(
+        code,
+        exact=False
+    ).last
+
+
+    option.click(
+        force=True,
+        timeout=15000
+    )
+
+
+    log(
+        f"{code}完成"
+    )
 
 
 
 def select_date(page):
 
-    debug("日期選擇")
+
+    log(
+        "日期"
+    )
 
 
     page.get_by_text(
         "出發日期",
         exact=True
-    ).first.locator(
-        "xpath=ancestor::div[@role='button'][1]"
     ).click(
         force=True
     )
 
 
-    wait(page,2)
+    wait(
+        page,
+        2
+    )
 
+
+    # 測試固定八月
 
     while True:
 
@@ -98,27 +156,29 @@ def select_date(page):
         ).first.inner_text()
 
 
-        debug(
-            "月份:"+month
-        )
+        log(month)
 
 
-        if "八月" in month and "2026" in month:
+        if "八月" in month:
+
             break
 
 
         page.locator(
             "button.rdrNextButton"
-        ).first.click(
+        ).click(
             force=True
         )
 
-        wait(page,1)
+        wait(
+            page,
+            1
+        )
 
 
 
     days = page.locator(
-        ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
+        ".rdrDay:not(.rdrDayPassive)"
     )
 
 
@@ -130,17 +190,18 @@ def select_date(page):
                 force=True
             )
 
-            debug("出發15完成")
             break
 
 
 
-    wait(page,2)
-
+    wait(
+        page,
+        2
+    )
 
 
     days = page.locator(
-        ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
+        ".rdrDay:not(.rdrDayPassive)"
     )
 
 
@@ -152,149 +213,12 @@ def select_date(page):
                 force=True
             )
 
-            debug("回程22完成")
             break
 
 
-
-    wait(page,2)
-
-
-
-
-def select_departure(page, code):
-
-
-    debug(
-        "選出發地 "+code
+    log(
+        "日期完成"
     )
-
-
-    label = page.get_by_text(
-        "出發地點",
-        exact=True
-    )
-
-
-    input_box = label.locator(
-        "xpath=following::input[1]"
-    )
-
-
-    input_box.click(
-        force=True
-    )
-
-
-    input_box.fill(
-        code
-    )
-
-
-    wait(page,3)
-
-
-    page.get_by_text(
-        code,
-        exact=False
-    ).last.click(
-        force=True,
-        timeout=10000
-    )
-
-
-    debug(
-        "出發地完成"
-    )
-
-
-
-
-def select_arrival(page, code):
-
-
-    debug(
-        "選目的地 "+code
-    )
-
-
-    input_box = page.locator(
-        "#arrivalPlaceDesktop"
-    )
-
-
-    input_box.click(
-        force=True
-    )
-
-
-    input_box.fill(
-        code
-    )
-
-
-    wait(page,3)
-
-
-    page.get_by_text(
-        code,
-        exact=False
-    ).last.click(
-        force=True,
-        timeout=10000
-    )
-
-
-    debug(
-        "目的地完成"
-    )
-
-
-
-
-
-def search(page):
-
-
-    debug(
-        "查詢航班"
-    )
-
-
-    button = page.get_by_role(
-        "button",
-        name="查詢航班"
-    ).first
-
-
-    button.scroll_into_view_if_needed()
-
-
-    wait(page,2)
-
-
-    button.click(
-        force=True,
-        timeout=15000
-    )
-
-
-    wait(page,12)
-
-
-
-    debug(
-        "網址:"+page.url
-    )
-
-
-    if "select-flight" in page.url:
-
-        return True
-
-    return False
-
-
 
 
 
@@ -317,50 +241,81 @@ def main():
         try:
 
 
-            open_vietjet(page)
-
-
-            select_date(page)
-
-
-            select_departure(
-                page,
-                "TPE"
+            log(
+                "開啟網站"
             )
 
 
-            wait(page,2)
-
-
-            select_arrival(
-                page,
-                "CTS"
+            page.goto(
+                "https://www.vietjetair.com/zh-TW",
+                timeout=60000
             )
 
 
-            wait(page,3)
+            wait(
+                page,
+                8000
+            )
 
 
+            # cookie
 
-            ok = search(page)
+            try:
 
-
-
-            if ok:
-
-
-                body = page.locator(
-                    "body"
-                ).inner_text(
-                    timeout=10000
+                page.get_by_text(
+                    "接受",
+                    exact=True
+                ).click(
+                    timeout=3000
                 )
+
+            except:
+
+                pass
+
+
+
+            select_date(
+                page
+            )
+
+
+            select_airport(
+                page,
+                "TPE",
+                False
+            )
+
+
+            select_airport(
+                page,
+                "CTS",
+                True
+            )
+
+
+            click_search(
+                page
+            )
+
+
+            wait(
+                page,
+                10000
+            )
+
+
+            log(
+                page.url
+            )
+
+
+            if "select-flight" in page.url:
 
 
                 send(
-                    "✅ CTS成功\n\n"
-                    +page.url
-                    +"\n\n"
-                    +body[:3000]
+                    "✅ CTS成功\n"
+                    + page.url
                 )
 
 
@@ -369,7 +324,7 @@ def main():
 
                 send(
                     "⚠️ 未進入航班頁\n"
-                    +page.url
+                    + page.url
                 )
 
 
@@ -382,34 +337,18 @@ def main():
             print(err)
 
 
-            try:
-
-                page.screenshot(
-                    path="error.png",
-                    full_page=True
-                )
-
-            except:
-
-                pass
-
-
-
             send(
-                "❌ 查詢異常\n\n"
-                +str(e)
-                +"\n\n"
-                +err[-2000:]
+                "❌錯誤\n\n"
+                + str(e)
+                + "\n\n"
+                + err[-2000:]
             )
 
 
 
         finally:
 
-
             browser.close()
-
-
 
 
 
