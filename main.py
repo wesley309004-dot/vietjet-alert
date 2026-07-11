@@ -39,7 +39,8 @@ def wait(page, sec=1):
 
     page.wait_for_timeout(
         sec * 1000
-    ) def open_vietjet(page):
+    ) 
+def open_vietjet(page):
 
     debug("開啟越捷首頁")
 
