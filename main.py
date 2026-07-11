@@ -1,17 +1,17 @@
-from playwright.sync_api import sync_playwright, TimeoutError
+from playwright.sync_api import sync_playwright
 import os
 import requests
 import traceback
 import datetime
-import time
+
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
+
 def send(msg):
 
     try:
-
         requests.post(
             f"https://api.telegram.org/bot{TOKEN}/sendMessage",
             data={
@@ -22,11 +22,9 @@ def send(msg):
         )
 
     except Exception as e:
+        print("Telegram error:", e)
 
-        print(
-            "Telegram error:",
-            e
-        )
+
 
 def debug(msg):
 
@@ -35,24 +33,27 @@ def debug(msg):
         msg
     )
 
+
+
 def wait(page, sec=1):
 
     page.wait_for_timeout(
         sec * 1000
-    ) 
+    )
+
+
+
 def open_vietjet(page):
 
-    debug("開啟越捷首頁")
+    debug("開啟越捷")
 
     page.goto(
         "https://www.vietjetair.com/zh-TW",
         timeout=60000
     )
 
-    wait(
-        page,
-        8
-    )
+    wait(page,8)
+
 
     try:
 
@@ -63,36 +64,32 @@ def open_vietjet(page):
             timeout=3000
         )
 
-        debug(
-            "Cookie 已接受"
-        )
+        debug("Cookie完成")
+
 
     except:
 
-        debug(
-            "沒有 Cookie"
-        )
+        debug("沒有Cookie")
+
+
 
 def select_date(page):
 
-    debug(
-        "開啟日期選擇"
-    )
+    debug("日期選擇")
+
 
     page.get_by_text(
         "出發日期",
         exact=True
     ).first.locator(
         "xpath=ancestor::div[@role='button'][1]"
-    ).click()
-
-    wait(
-        page,
-        2
+    ).click(
+        force=True
     )
 
-    # 目前測試日期
-    # 2026/08/15 - 2026/08/22
+
+    wait(page,2)
+
 
     while True:
 
@@ -100,13 +97,15 @@ def select_date(page):
             ".rdrMonthAndYearPickers"
         ).first.inner_text()
 
+
         debug(
-            "目前月份:"+month
+            "月份:"+month
         )
 
-        if month == "八月 2026":
 
+        if "八月" in month and "2026" in month:
             break
+
 
         page.locator(
             "button.rdrNextButton"
@@ -114,14 +113,14 @@ def select_date(page):
             force=True
         )
 
-        wait(
-            page,
-            1
-        )
+        wait(page,1)
+
+
 
     days = page.locator(
         ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
     )
+
 
     for i in range(days.count()):
 
@@ -131,20 +130,19 @@ def select_date(page):
                 force=True
             )
 
-            debug(
-                "出發日期完成"
-            )
-
+            debug("出發15完成")
             break
 
-    wait(
-        page,
-        2
-    )
+
+
+    wait(page,2)
+
+
 
     days = page.locator(
         ".rdrMonth button.rdrDay:not(.rdrDayPassive)"
     )
+
 
     for i in range(days.count()):
 
@@ -154,165 +152,202 @@ def select_date(page):
                 force=True
             )
 
-            debug(
-                "回程日期完成"
-            )
-
+            debug("回程22完成")
             break
 
-    wait(
-        page,
-        2
-    )
 
-def select_airport(page, input_id, code):
+
+    wait(page,2)
+
+
+
+
+def select_departure(page, code):
+
 
     debug(
-        f"選擇機場 {code}"
+        "選出發地 "+code
     )
 
-    box = page.locator(
-        input_id
+
+    label = page.get_by_text(
+        "出發地點",
+        exact=True
     )
 
-    box.click(
+
+    input_box = label.locator(
+        "xpath=following::input[1]"
+    )
+
+
+    input_box.click(
         force=True
     )
 
-    box.fill(
+
+    input_box.fill(
         code
     )
 
-    wait(
-        page,
-        3
+
+    wait(page,3)
+
+
+    page.get_by_text(
+        code,
+        exact=False
+    ).last.click(
+        force=True,
+        timeout=10000
     )
 
-    try:
-
-        page.get_by_text(
-            code,
-            exact=False
-        ).last.click(
-            force=True,
-            timeout=10000
-        )
-
-        debug(
-            f"{code} 選取成功"
-        )
-
-    except Exception as e:
-
-        debug(
-            f"{code} 選取失敗 {e}"
-        )
-
-        raise
-
-def search_flight(page):
 
     debug(
-        "準備查詢航班"
+        "出發地完成"
     )
 
-    try:
 
-        button = page.get_by_role(
-            "button",
-            name="查詢航班"
-        ).first
 
-        button.click(
-            force=True,
-            timeout=10000
-        )
 
-    except Exception as e:
+def select_arrival(page, code):
 
-        debug(
-            "查詢按鈕失敗"
-        )
-
-        raise e
-
-    wait(
-        page,
-        10
-    )
 
     debug(
-        "目前網址:"
-        + page.url
+        "選目的地 "+code
     )
+
+
+    input_box = page.locator(
+        "#arrivalPlaceDesktop"
+    )
+
+
+    input_box.click(
+        force=True
+    )
+
+
+    input_box.fill(
+        code
+    )
+
+
+    wait(page,3)
+
+
+    page.get_by_text(
+        code,
+        exact=False
+    ).last.click(
+        force=True,
+        timeout=10000
+    )
+
+
+    debug(
+        "目的地完成"
+    )
+
+
+
+
+
+def search(page):
+
+
+    debug(
+        "查詢航班"
+    )
+
+
+    button = page.get_by_role(
+        "button",
+        name="查詢航班"
+    ).first
+
+
+    button.scroll_into_view_if_needed()
+
+
+    wait(page,2)
+
+
+    button.click(
+        force=True,
+        timeout=15000
+    )
+
+
+    wait(page,12)
+
+
+
+    debug(
+        "網址:"+page.url
+    )
+
 
     if "select-flight" in page.url:
 
-        debug(
-            "成功進入航班頁"
-        )
-
         return True
 
-    else:
+    return False
 
-        debug(
-            "沒有進入航班頁"
-        )
 
-        return False
+
+
 
 def main():
 
+
     with sync_playwright() as p:
+
 
         browser = p.chromium.launch(
             headless=True
         )
 
+
         page = browser.new_page(
             locale="zh-TW"
         )
 
+
         try:
 
-            open_vietjet(
-                page
-            )
 
-            select_date(
-                page
-            )
+            open_vietjet(page)
 
-            # 出發地
-            select_airport(
+
+            select_date(page)
+
+
+            select_departure(
                 page,
-                "#departPlaceDesktop",
                 "TPE"
             )
 
-            wait(
-                page,
-                2
-            )
 
-            # 目的地
-            select_airport(
+            wait(page,2)
+
+
+            select_arrival(
                 page,
-                "#arrivalPlaceDesktop",
                 "CTS"
             )
 
-            wait(
-                page,
-                3
-            )
 
-            success = search_flight(
-                page
-            )
+            wait(page,3)
 
-            if success:
+
+
+            ok = search(page)
+
+
+
+            if ok:
+
 
                 body = page.locator(
                     "body"
@@ -320,25 +355,32 @@ def main():
                     timeout=10000
                 )
 
+
                 send(
-                    "✅ CTS航班頁成功\n\n"
-                    + page.url
-                    + "\n\n"
-                    + body[:3000]
+                    "✅ CTS成功\n\n"
+                    +page.url
+                    +"\n\n"
+                    +body[:3000]
                 )
+
 
             else:
 
+
                 send(
-                    "⚠️ CTS未進入航班頁\n"
-                    + page.url
+                    "⚠️ 未進入航班頁\n"
+                    +page.url
                 )
+
+
 
         except Exception as e:
 
-            debug(
-                traceback.format_exc()
-            )
+
+            err = traceback.format_exc()
+
+            print(err)
+
 
             try:
 
@@ -351,17 +393,26 @@ def main():
 
                 pass
 
+
+
             send(
-                "❌ Vietjet錯誤\n\n"
-                + str(e)
-                + "\n\n"
-                + traceback.format_exc()[-2000:]
+                "❌ 查詢異常\n\n"
+                +str(e)
+                +"\n\n"
+                +err[-2000:]
             )
+
+
 
         finally:
 
+
             browser.close()
 
-if __name__ == "__main__":
+
+
+
+
+if __name__=="__main__":
 
     main()
